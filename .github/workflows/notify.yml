@@ -1,0 +1,25 @@
+name: Telegram notifications
+
+on:
+  schedule:
+    - cron: "15 * * * *"   # щогодини о :15 (GitHub може запізнюватись на кілька хвилин)
+  workflow_dispatch:        # кнопка «Run workflow» для ручного запуску
+
+concurrency:
+  group: notify
+  cancel-in-progress: false
+
+jobs:
+  notify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Send queued notifications
+        env:
+          BACKEND_URL: ${{ secrets.BACKEND_URL }}
+          INTERNAL_API_KEY: ${{ secrets.INTERNAL_API_KEY }}
+        run: |
+          # безкоштовний Render засинає: перший запит його будить (до ~1 хв)
+          curl -fsS --retry 3 --retry-delay 20 --max-time 120 -o /dev/null "$BACKEND_URL/health"
+          curl -fsS --max-time 120 -X POST "$BACKEND_URL/internal/notify" \
+            -H "Authorization: Bearer $INTERNAL_API_KEY"
