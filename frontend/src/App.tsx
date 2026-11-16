@@ -6,6 +6,7 @@ import AuthResetPage from './pages/AuthResetPage'
 import EventPage from './pages/EventPage'
 import HomePage from './pages/HomePage'
 import NotFoundPage from './pages/NotFoundPage'
+import StyleguidePage from './pages/StyleguidePage'
 import SupportPage from './pages/SupportPage'
 import WaitlistPage from './pages/WaitlistPage'
 
@@ -20,6 +21,8 @@ export default function App() {
         <Route path="auth" element={<AuthPage />} />
         <Route path="auth/callback" element={<AuthCallbackPage />} />
         <Route path="auth/reset" element={<AuthResetPage />} />
+        {/* ТИМЧАСОВО: перевірка дизайн-системи */}
+        <Route path="styleguide" element={<StyleguidePage />} />
         <Route path="*" element={<NotFoundPage />} />
       </Route>
     </Routes>
