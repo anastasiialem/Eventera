@@ -54,14 +54,19 @@ cp .env.example .env                                                     # од�
 
 ### Деплой на Render
 
-1. New → Web Service → репозиторій, **Runtime: Docker**:
-   - Dockerfile Path: `infra/backend.Dockerfile`
-   - Docker Build Context Directory: `backend`
-   - Health Check Path: `/health`
-2. Environment: усі змінні з `.env.example`. `PUBLIC_BASE_URL` = адреса сервісу на Render (`https://….onrender.com`), `FRONTEND_URL` = адреса сайту на Vercel.
-3. Після деплою сервіс сам ставить webhook. Перевірка: напишіть боту `/start`.
-4. GitHub → Settings → Secrets → Actions: `BACKEND_URL` (адреса Render) і `INTERNAL_API_KEY` (те саме значення, що на Render).
+Конфіг уже в репозиторії: `infra/render.yaml` (Blueprint).
+
+1. Render → **New → Blueprint** → репозиторій `Eventera` → Blueprint Path: `infra/render.yaml`.
+2. Render попросить значення змінних — скопіюйте з `backend/.env`:
+   `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, `TELEGRAM_BOT_TOKEN`, `TELEGRAM_WEBHOOK_SECRET`, `INTERNAL_API_KEY`,
+   `ADMIN_CHAT_IDS`, `FRONTEND_URL` (адреса сайту на Vercel, `https://…vercel.app`).
+   `PUBLIC_BASE_URL` не потрібен: адресу сервісу Render передає сам (`RENDER_EXTERNAL_URL`).
+3. Після деплою сервіс сам ставить webhook. Перевірка: `https://<сервіс>.onrender.com/health` і `/start` у боті.
+4. GitHub → Settings → Secrets → Actions: `BACKEND_URL` (адреса Render) і `INTERNAL_API_KEY` (те саме значення).
    Розсилка: `.github/workflows/notify.yml`, щогодини.
-5. Фронтенду (Vercel): `VITE_API_URL` = адреса Render, `VITE_TELEGRAM_BOT_URL=https://t.me/Eventera_lviv_bot`.
+5. Фронтенду (Vercel): `VITE_TELEGRAM_BOT_URL=https://t.me/Eventera_lviv_bot` і адреса Render для кнопки Telegram.
+
+Безкоштовний Render засинає після ~15 хв без запитів; перше повідомлення боту після сну обробляється до ~1 хв
+(Telegram сам повторює запит, повідомлення не губляться).
 
 Email-сповіщення поки не надсилаються: у черзі вони є (`channel = 'email'`), але відправку ще треба додати.
