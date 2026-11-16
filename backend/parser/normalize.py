@@ -9,6 +9,14 @@ from zoneinfo import ZoneInfo
 from .models import ParsedEvent
 
 KYIV = ZoneInfo("Europe/Kyiv")
+# Different spellings of the same venue -> one canonical name (keys in lowercase).
+VENUE_ALIASES = {
+    "театр імені марії заньковецької": "Театр ім. Марії Заньковецької",
+    "національний драматичний театр імені марії заньковецької": "Театр ім. Марії Заньковецької",
+}
+
+def canonical_venue(name: str) -> str:
+    return VENUE_ALIASES.get(name.strip().lower(), name.strip())
 
 # --- event type -> category + genres -----------------------------------------
 # The database has no "standup" category, so stand-up = other + the standup genre.
@@ -137,6 +145,14 @@ def clean_artist(title: str, performer: Optional[str] = None) -> str:
         name = _NOISE.sub("", name).strip()
     return name or (title or "").strip()
 
+def names_after_colon(title: str) -> list[str]:
+    """'Розгони: Кудрява, Барило, Михайлова' -> ['Кудрява', 'Барило', 'Михайлова'].
+    Used for stand-up and shows, where the part before the colon is the show name."""
+    if ":" not in title:
+        return []
+    tail = title.split(":", 1)[1]
+    parts = re.split(r",|&|\s+та\s+|\s+і\s+", tail, flags=re.IGNORECASE)
+    return [p.strip(" «»\"") for p in parts if p.strip(" «»\"")]
 
 def _performers(obj: dict) -> list[str]:
     p = obj.get("performer")
@@ -188,7 +204,7 @@ def to_event(obj: dict, source: str, *, time_is_utc_clock: bool = False) -> Opti
     if ends_at and ends_at < starts_at:
         ends_at = None
 
-    venue = (_get(obj, "location", "name") or "").strip()
+    venue = canonical_venue(_get(obj, "location", "name") or "")
     street = (_get(obj, "location", "address", "streetAddress") or "").strip() or None
     category, genres = category_and_genres(obj, title, venue)
 
@@ -198,6 +214,10 @@ def to_event(obj: dict, source: str, *, time_is_utc_clock: bool = False) -> Opti
     if category in ("theatre", "opera"):
         # for plays the title is not an artist; users follow them by keyword instead
         artists = [clean_artist(p) for p in performers if clean_artist(p) != title]
+
+    if category == "other":
+        # stand-up and shows: performers are listed after the colon, if at all
+        artists = names_after_colon(title)
 
     url = (obj.get("url") or _get(obj, "offers", "url") or "").strip()
     offers = obj.get("offers")

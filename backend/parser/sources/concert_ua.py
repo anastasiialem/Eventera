@@ -26,10 +26,20 @@ def parse(html: str) -> list[ParsedEvent]:
     return events
 
 
-def fetch(url: str = CATALOG_URL) -> list[ParsedEvent]:
-    """Downloads the catalog and returns its events.
-
-    TODO: the catalog shows ~20 events. Find out how the next page is loaded
-    (a ?page=2 parameter or a "Show more" button) and walk through all pages.
-    """
-    return parse(get_html(url))
+def fetch(url: str = CATALOG_URL, max_pages: int = 20) -> list[ParsedEvent]:
+    """Downloads catalog pages one by one until a page brings no new events."""
+    events, seen = [], set()
+    for page in range(1, max_pages + 1):
+        page_url = url if page == 1 else f"{url}?page={page}"
+        try:
+            found = parse(get_html(page_url))
+        except Exception:
+            if page == 1:
+                raise  # the catalog itself failed: show the real error
+            break  # page does not exist
+        new = [e for e in found if e.external_id not in seen]
+        if not new:
+            break  # the site repeats the last page, so we are done
+        seen.update(e.external_id for e in new)
+        events.extend(new)
+    return events

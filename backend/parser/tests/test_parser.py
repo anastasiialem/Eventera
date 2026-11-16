@@ -70,3 +70,8 @@ def test_helpers():
     dt, all_day = parse_datetime("2026-12-05")
     assert all_day and dt == datetime(2026, 12, 5, 0, 0, tzinfo=KYIV)
     assert prices([{"price": 300}, {"lowPrice": 200, "highPrice": 900}]) == (200, 900)
+
+    from parser.normalize import names_after_colon
+    assert names_after_colon("Розгони: Кудрява, Барило, Михайлова") == ["Кудрява", "Барило", "Михайлова"]
+    assert names_after_colon("Стендап Шоу: Олег Та Степан") == ["Олег", "Степан"]
+    assert names_after_colon("«Батя 2» Сольний Стендап Концерт") == []
