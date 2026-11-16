@@ -1,0 +1,71 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Дизайн-токени Eventera (джерело — design/01–04 PNG).
+   Значення — RGB-канали, щоб працювали модифікатори прозорості: bg-plum/20. */
+:root {
+  --powder: 245 233 236; /* фон сторінки #F5E9EC */
+  --powder-deep: 234 220 226; /* підкладка сегмент-табів #EADCE2 */
+  --card: 255 251 250; /* картки #FFFBFA */
+  --plum: 74 42 63; /* основний #4A2A3F — «Квитки», «Реєстрація» */
+  --plum-dark: 46 27 40; /* футер, активний таб #2E1B28 */
+  --plum-soft: 122 92 112; /* другорядний текст #7A5C70 */
+  --ink: 46 27 40; /* заголовки */
+  --coral: 232 128 106; /* акцент #E8806A — «Знайти», «Купити» */
+  --coral-soft: 251 224 218; /* «Мало квитків», «Ти чекаєш…» #FBE0DA */
+  --coral-deep: 196 84 66; /* текст на coral-soft #C45442 */
+  --lavender: 201 182 228; /* Telegram #C9B6E4 */
+  --lavender-soft: 236 228 247; /* «Нове», кружечки іконок #ECE4F7 */
+  --line: 74 42 63; /* бордери — завжди з прозорістю: border-line/15 */
+  --success: 74 140 92; /* «Підключено» */
+
+  color-scheme: light;
+}
+
+@layer base {
+  html {
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  body {
+    @apply bg-powder font-sans text-plum antialiased;
+    /* рідка сітка дрібних крапок + ледь помітний шум (~4%) */
+    background-image:
+      url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 .29 0 0 0 0 .16 0 0 0 0 .25 0 0 0 .04 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E"),
+      radial-gradient(rgb(var(--plum) / 0.07) 1px, transparent 1.2px);
+    background-size:
+      160px 160px,
+      28px 28px;
+  }
+
+  h1,
+  h2,
+  h3 {
+    @apply font-display font-normal text-ink;
+  }
+
+  :focus-visible {
+    @apply outline-none ring-2 ring-coral/70 ring-offset-2 ring-offset-powder;
+  }
+}
+
+@layer utilities {
+  .no-scrollbar {
+    scrollbar-width: none;
+  }
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
