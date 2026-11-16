@@ -187,7 +187,12 @@ def clean_artist(title: str, performer: Optional[str] = None) -> str:
     name = _AFTER_NAME.split(name, maxsplit=1)[0]
     for _ in range(2):
         name = _NOISE.sub("", name).strip()
+    name = _DANGLING.sub("", name)  # 'Михайло Кукуюк &' -> 'Михайло Кукуюк'
     return name or (title or "").strip()
+
+
+# A connector left hanging at the end after cutting the title: '&', '+', ',', ' x', '-'
+_DANGLING = re.compile(r"(?:\s*(?:&|\+|,|\bx\b|[-–—]))+\s*$", re.IGNORECASE)
 
 
 # Words that end the artist's name: 'ROMOZA концерт у Львові', 'KADNAY з великим весняним концертом',

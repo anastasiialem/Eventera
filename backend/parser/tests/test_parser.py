@@ -138,3 +138,10 @@ def test_concert_artists():
     assert concert_artists("Казковий мюзикл «Вкрадений час»") == []
     # open mic is a format, not a person
     assert _ev("Стендап: ОПЕНМАЙК", "CULT Comedy Hall").artists == []
+
+
+def test_no_dangling_connector():
+    from parser.normalize import clean_artist
+    assert clean_artist("Михайло Кукуюк & концерт") == "Михайло Кукуюк"
+    assert clean_artist("APLAY x SCHILLER") == "APLAY x SCHILLER"
+    assert clean_artist("DiZeX") == "DiZeX"
