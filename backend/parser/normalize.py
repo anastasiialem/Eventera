@@ -181,10 +181,55 @@ def clean_artist(title: str, performer: Optional[str] = None) -> str:
     """'Курган і Agregat. 100% на ЗСУ' -> 'Курган і Agregat'.
     A heuristic; tricky cases can later be handed to AI."""
     name = (performer or title or "").strip()
-    name = re.split(r":\s|\.\s|\s[–—]\s", name, maxsplit=1)[0]
+    name = re.split(r":\s|\.\s|\s[–—-]\s", name, maxsplit=1)[0]
+    if "«" in name and not name.startswith("«"):
+        name = name.split("«", 1)[0]  # 'Ілля Найда «Колядуємо Разом»' -> 'Ілля Найда'
+    name = _AFTER_NAME.split(name, maxsplit=1)[0]
     for _ in range(2):
         name = _NOISE.sub("", name).strip()
+    name = _DANGLING.sub("", name)  # 'Михайло Кукуюк &' -> 'Михайло Кукуюк'
     return name or (title or "").strip()
+
+
+# A connector left hanging at the end after cutting the title: '&', '+', ',', ' x', '-'
+_DANGLING = re.compile(r"(?:\s*(?:&|\+|,|\bx\b|[-–—]))+\s*$", re.IGNORECASE)
+
+
+# Words that end the artist's name: 'ROMOZA концерт у Львові', 'KADNAY з великим весняним концертом',
+# 'EPOLETS презентація вінілу'
+_AFTER_NAME = re.compile(
+    r"\s+(?:з\s+(?:\S+\s+){0,3}концерт\w*|концерт\w*|презентац\w*|вперше\b|у\s+львів\w*)",
+    re.IGNORECASE)
+# Tributes and themed shows have no artist to follow (checked on the full title).
+_TRIBUTE = re.compile(
+    r"при свічках|candlelight|tribute|трибют|у виконанні|symphony|оркестр|music of|музика\s|хіти|хітів",
+    re.IGNORECASE)
+# A candidate that is a show format or a season, not a person or a band.
+_NOT_AN_ARTIST = re.compile(
+    r"опенмайк|open[\s-]?mic|стендап|накидони|шоу|show|party|паті|мюзикл|казк|пригоди|"
+    r"різдв|новорічн|пісня|forum|форум|фестивал|festival|ярмарок",
+    re.IGNORECASE)
+# 'Концерт гурту DiZeX в Оплесках', 'Гурт BOYKY «Бойківське Різдво»'
+_BAND = re.compile(r"(?:^|\s)(?:гурту|гурт|гурта|групи)\s+(.+)", re.IGNORECASE)
+
+
+def concert_artists(title: str, performer: Optional[str] = None) -> list[str]:
+    """Artists of a concert, from the performer field or the title."""
+    text = (performer or title).strip()
+    if _TRIBUTE.search(title) and not re.search(r"у супроводі", title, re.IGNORECASE):
+        return []  # 'Гра престолів при свічках', 'Eminem. Tribute Show'
+    band = _BAND.search(text)
+    if band:
+        name = re.split(r"\s+(?:в|у)\s+|\.\s|«", band.group(1), maxsplit=1)[0].strip()
+        return [name] if name else []
+    quoted = re.search(r"«([^»]*,[^»]*)»", text)
+    if quoted:  # 'Благодійний Концерт «Baryk, Olsi, Linz»'
+        return split_names(quoted.group(1))
+    name = clean_artist(title, performer)
+    if not name or _NOT_AN_ARTIST.search(name):
+        return []
+    return [name]
+
 
 def split_names(text: str) -> list[str]:
     """'Кудрява, Барило та Скорик' -> ['Кудрява', 'Барило', 'Скорик']."""
@@ -281,15 +326,15 @@ def to_event(obj: dict, source: str, *, time_is_utc_clock: bool = False) -> Opti
     category, genres = refine_category(category, genres, full_title, venue)
 
     performers = _performers(obj)
-    artist = clean_artist(title, performers[0] if performers else None)
-    artists = [artist] + [clean_artist(p) for p in performers[1:]]
+    artists = concert_artists(title, performers[0] if performers else None)
+    artists += [a for p in performers[1:] for a in concert_artists(p)]
     if category in ("theatre", "opera"):
         # for plays the title is not an artist; users follow them by keyword instead
         artists = [clean_artist(p) for p in performers if clean_artist(p) != title]
 
     if category == "other":
         # stand-up and shows: performers are listed after the colon or between '|', if at all
-        artists = title_names or names_after_colon(title)
+        artists = [n for n in (title_names or names_after_colon(title)) if not _NOT_AN_ARTIST.search(n)]
 
     url = (obj.get("url") or _get(obj, "offers", "url") or "").strip()
     offers = obj.get("offers")
