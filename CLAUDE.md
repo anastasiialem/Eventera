@@ -39,14 +39,31 @@ VITE_TELEGRAM_BOT_URL, VITE_ENABLE_GOOGLE
 - `/auth` (`?mode=signup`), `/auth/callback`, `/auth/reset`
 - `/support` — підтримати збір
 ## Дані (Supabase)
-events: id, title, artist, category (concert|theatre|festival|opera|other), genre, starts_at (timestamptz),
-venue, address, price_min, price_max, is_free, ticket_url, source, image_url (nullable — офіційне фото з сайту),
-description, badge (few_tickets|new|null), dedupe_key (unique), created_at
-profiles: id (= auth.users.id), name, telegram_chat_id, telegram_link_token, notify_telegram, notify_email, remind_day_before, max_price
-subscriptions: id, user_id, artist_name, created_at
+Основна схема — міграції Ролі 3 у `supabase/migrations/` (не змінювати; фронт підлаштовується під неї).
+Моя частина — `infra/supabase/schema.sql` (feedback, clicks, RPC), накатується після міграцій.
+
+Фронт читає події з view **event_feed** (тільки читання):
+id (bigint), slug, title, description, category (concert|theatre|festival|opera|other), status (scheduled|postponed|cancelled),
+starts_at, ends_at (timestamptz), is_all_day, price_min, price_max, currency, is_free (generated: price_max = 0),
+ticket_status (unknown|available|few_left|sold_out), image_url (nullable — офіційне фото з сайту), ticket_url,
+first_seen_at, is_new (за останні 3 дні), venue_id, venue_name, venue_address,
+artists jsonb [{id, name, slug}], genres jsonb [{slug, name}], sources jsonb [{source, url, price_min}].
+Бейдж на картці рахується на фронті: ticket_status = few_left → «Мало квитків», інакше is_new → «Нове».
+Базові таблиці: events, venues, artists (name, slug, aliases[]), genres (slug — для фільтра), event_artists, event_genres,
+event_sources, sources. Пише в них тільки service_role (парсер / бекенд).
+
+profiles: id (= auth.users.id), display_name, email_alerts, telegram_alerts, created_at, updated_at.
+Створюється тригером handle_new_user(): ім'я береться з raw_user_meta_data.display_name →
+у `supabase.auth.signUp` передавати `options.data.display_name`.
+subscriptions («Я чекаю на…»): id, user_id, kind (artist|event|keyword), artist_id | event_id | keyword (рівно одне), created_at.
+Додаємо так: є артист у `artists` (назва або aliases) → kind='artist' + artist_id; немає → kind='keyword'.
+telegram_links: user_id, chat_id, username · telegram_link_tokens: token, user_id, expires_at (15 хв).
+notifications_sent, notification_queue — тільки бекенд.
+
 feedback: id, user_id (nullable), rating (1–5), liked, disliked, would_pay (yes|maybe|no), page, created_at
-clicks: id, user_id (nullable), kind (donate|subscribe|ticket|telegram), event_id (nullable), created_at
-SQL-схема: `infra/supabase/schema.sql` (ідемпотентна, з RLS).
+clicks: id, user_id (nullable), kind (donate|subscribe|ticket|telegram), event_id (nullable → events.id), created_at
+RLS: feedback і clicks — insert для всіх (user_id null або свій), select нікому з anon/authenticated.
+RPC `donate_clicks_count()` — кількість кліків «Задонатити» (для /support).
 
 ## API Ролі 3 (якщо VITE_API_URL задано)
 GET /api/events?period=week|month|season|year&category=&price_max=&free=&genre=&q=&limit=&offset=
