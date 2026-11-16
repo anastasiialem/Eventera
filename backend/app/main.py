@@ -13,6 +13,7 @@ from aiogram import Dispatcher
 from aiogram.types import Update
 from fastapi import FastAPI, Header, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import HTMLResponse
 
 from . import config, notify
 from .admin import make_admin_router
@@ -64,6 +65,39 @@ app.add_middleware(
 def _check_secret(given: str | None, expected: str) -> None:
     if not given or not hmac.compare_digest(given, expected):
         raise HTTPException(status_code=401, detail="unauthorized")
+
+
+_ROOT_PAGE = """<!doctype html>
+<html lang="uk"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Eventera API</title>
+<style>
+  :root {{ color-scheme: light; }}
+  body {{ margin: 0; min-height: 100vh; display: grid; place-items: center; background: #F5E9EC;
+         font: 16px/1.5 system-ui, -apple-system, "Segoe UI", sans-serif; color: #4A2A3F; }}
+  main {{ background: #FFFBFA; border-radius: 24px; padding: 32px 28px; max-width: 420px; margin: 16px;
+         box-shadow: 0 10px 30px rgba(74,42,63,.08); }}
+  h1 {{ font-family: Georgia, serif; font-weight: 400; font-size: 32px; margin: 0 0 4px; }}
+  p {{ margin: 0 0 20px; opacity: .8; }}
+  a {{ display: block; padding: 12px 16px; margin-top: 10px; border-radius: 999px; text-decoration: none;
+      text-align: center; font-weight: 600; color: #4A2A3F; background: #F5E9EC; }}
+  a.primary {{ background: #4A2A3F; color: #fff; }}
+  small {{ display: block; margin-top: 18px; opacity: .6; text-align: center; }}
+</style></head>
+<body><main>
+  <h1>eventera</h1>
+  <p>API і Telegram-бот афіші Львова. Сайт живе окремо; тут — сервер для бота й сайту.</p>
+  <a class="primary" href="https://t.me/{bot}">Відкрити бота @{bot}</a>
+  {site}
+  <a href="/docs">Документація API</a>
+  <small>Стан: <a href="/health" style="display:inline;padding:0;background:none;margin:0">/health</a></small>
+</main></body></html>"""
+
+
+@app.get("/", response_class=HTMLResponse, include_in_schema=False)
+async def root() -> str:
+    site = (f'<a href="{settings.frontend_url}">Сайт Eventera</a>'
+            if settings.frontend_url.startswith("https://") else "")
+    return _ROOT_PAGE.format(bot=_bot_username or "Eventera_lviv_bot", site=site)
 
 
 @app.get("/health")
