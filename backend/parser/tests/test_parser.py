@@ -75,3 +75,44 @@ def test_helpers():
     assert names_after_colon("Розгони: Кудрява, Барило, Михайлова") == ["Кудрява", "Барило", "Михайлова"]
     assert names_after_colon("Стендап Шоу: Олег Та Степан") == ["Олег", "Степан"]
     assert names_after_colon("«Батя 2» Сольний Стендап Концерт") == []
+
+def _ev(title, venue="Somewhere", type_="MusicEvent"):
+    from parser.normalize import to_event
+    obj = {"@type": type_, "name": title, "startDate": "2026-12-01T19:00:00+02:00",
+           "location": {"name": venue}}
+    return to_event(obj, "concert_ua")
+
+
+def test_category_from_title():
+    # Concert.ua marks everything as MusicEvent; the title decides
+    assert (_ev("Батя 2. Сольний стендап концерт").category, _ev("Батя 2. Сольний стендап концерт").genres) \
+        == ("other", ["standup"])
+    assert _ev("Вистава «Обережно: жінки!»").category == "theatre"
+    assert _ev("Танго на пуантах та Ближче ніж кохання").category == "opera"
+    assert _ev("Georgian Royal Ballet").category == "opera"
+    assert _ev("Bridal Forum").category == "other"
+    assert _ev("ZWYNTAR у Львівській опері").category == "concert"         # 'опері' is a venue, not a genre
+    assert _ev("Coldplay & Imagine Dragons при свічках").category == "concert"  # 'Dragons' is not 'drag'
+    # comedy club: stand-up unless the title says it is a concert
+    assert _ev("Шоу психотерапія: Білоцерковець, Трачук", "Довгі бурхливі оплески").genres == ["standup"]
+    assert _ev("Концерт гурту DiZeX в Оплесках", "Довгі бурхливі оплески").category == "concert"
+
+
+def test_title_with_pipes():
+    from parser.normalize import split_title
+    assert split_title("СУБОТНІЙ СТЕНДАП В ОПЛЕСКАХ | 21 ЛИСТОПАДА") == ("СУБОТНІЙ СТЕНДАП В ОПЛЕСКАХ", [])
+    assert split_title("СТЕНДАП + НАКИДОНИ | ПРОНЮК, ОЗАРКІВ, БІЛОЦЕРКОВЕЦЬ | 22.11") \
+        == ("СТЕНДАП + НАКИДОНИ", ["ПРОНЮК", "ОЗАРКІВ", "БІЛОЦЕРКОВЕЦЬ"])
+    assert split_title("ПІД ПАЛИЧ | КОНЦЕРТ У ОПЛЕСКАХ | 2 ГРУДНЯ") == ("ПІД ПАЛИЧ", [])
+    ev = _ev("ВЕЧІР ІСТОРІЙ В ОПЛЕСКАХ | БОРОВИЧ І КОЛІН | 21 ЛИСТОПАДА", "Довгі бурхливі оплески")
+    assert ev.title == "ВЕЧІР ІСТОРІЙ В ОПЛЕСКАХ" and ev.artists == ["БОРОВИЧ", "КОЛІН"]
+    # a quoted part is a show title, not a person
+    assert _ev("Книгарня БУЕ: «Варвари Крижаної Планети»", "CULT Comedy Hall").artists == []
+
+
+def test_venue_aliases():
+    from parser.normalize import canonical_venue
+    assert canonical_venue("Львівський національний академічний театр опери та балету") \
+        == "Львівська національна опера"
+    assert canonical_venue("Міський палац культури ім. Г. Хоткевича") == "Палац культури ім. Гната Хоткевича"
+    assert canonical_venue("ТРЦ  VICTORIA GARDENS") == "ТРЦ VICTORIA GARDENS"

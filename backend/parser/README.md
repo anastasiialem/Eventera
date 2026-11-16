@@ -43,6 +43,28 @@ server and in GitHub Secrets, never in git and never in the frontend.
 - For plays the title is not an artist, so their `event_artists` stay empty
   ("I'm waiting for..." works for plays through a `keyword` subscription).
 - A different spelling of an artist from another site ("Курган & Agregat") is added to `artists.aliases`.
+- **Concert.ua marks almost everything as `MusicEvent`**, so `refine_category` in `normalize.py`
+  corrects the category from words in the title (stand-up, play, ballet, forum, ...) and the venue
+  (comedy clubs in `COMEDY_VENUES`).
+- Concert.ua puts dates and names into titles with `|` ("... | ПРОНЮК, ОЗАРКІВ | 22.11"):
+  `split_title` drops the date and turns the names into artists.
+- The same venue spelled differently is mapped to one name in `VENUE_ALIASES` (`normalize.py`).
+  Add a line there whenever a new duplicate venue shows up in the output.
+
+## Re-importing from scratch
+
+A re-run only updates prices and statuses; it does not change the category, title or artists
+of events that are already in the database. After changing the parsing rules, clear the parsed
+data in the Supabase SQL Editor and run `python -m parser.run --db` again:
+
+```sql
+-- WARNING: also deletes subscriptions and sent notifications that point to these events/artists
+truncate public.event_sources, public.event_artists, public.event_genres,
+         public.events, public.artists, public.venues
+restart identity cascade;
+```
+
+Do this only while there are no real users.
 
 ## Next steps
 

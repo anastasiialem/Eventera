@@ -9,14 +9,29 @@ from zoneinfo import ZoneInfo
 from .models import ParsedEvent
 
 KYIV = ZoneInfo("Europe/Kyiv")
+
+# --- venues ------------------------------------------------------------------
 # Different spellings of the same venue -> one canonical name (keys in lowercase).
+# When a new duplicate venue shows up in the output, add a line here.
 VENUE_ALIASES = {
     "театр імені марії заньковецької": "Театр ім. Марії Заньковецької",
     "національний драматичний театр імені марії заньковецької": "Театр ім. Марії Заньковецької",
+    "львівський національний академічний театр опери та балету": "Львівська національна опера",
+    "львівський національний академічний театр опери та балету імені соломії крушельницької":
+        "Львівська національна опера",
+    "міський палац культури ім. г. хоткевича": "Палац культури ім. Гната Хоткевича",
+    "палац культури ім. г. хоткевича": "Палац культури ім. Гната Хоткевича",
+    "палац мистецтв": "Львівський палац мистецтв",
 }
 
+# Comedy clubs: anything there that is not explicitly a concert is stand-up.
+COMEDY_VENUES = {"довгі бурхливі оплески", "cult comedy hall"}
+
+
 def canonical_venue(name: str) -> str:
-    return VENUE_ALIASES.get(name.strip().lower(), name.strip())
+    name = " ".join(name.split())  # collapse double spaces
+    return VENUE_ALIASES.get(name.lower(), name)
+
 
 # --- event type -> category + genres -----------------------------------------
 # The database has no "standup" category, so stand-up = other + the standup genre.
@@ -39,6 +54,32 @@ def category_and_genres(obj: dict, title: str, venue: str) -> tuple[str, list[st
     if t == "MusicEvent":
         return "concert", []
     return "other", []
+
+
+# Concert.ua marks almost everything as MusicEvent, so the title has the final say.
+_STANDUP_WORDS = re.compile(
+    r"стендап|stand[\s-]?up|розгони|накидони|імпровізац|опенмайк|open[\s-]?mic", re.IGNORECASE)
+_PLAY_WORDS = re.compile(r"\bвистав|\bспектакл", re.IGNORECASE)
+_BALLET_WORDS = re.compile(r"балет|ballet|пуант|\bопера\b|\bopera\b", re.IGNORECASE)
+_NOT_A_SHOW_WORDS = re.compile(
+    r"форум|forum|ярмарок|vintage|маркет|market|виставк|drag\s*queen|льодов", re.IGNORECASE)
+_CONCERT_WORDS = re.compile(r"концерт|гурт|оркестр|symphony|симфон", re.IGNORECASE)
+
+
+def refine_category(category: str, genres: list[str], title: str, venue: str) -> tuple[str, list[str]]:
+    """Corrects the category using words in the title and the venue."""
+    if "standup" in genres:
+        return category, genres
+    is_comedy_venue = venue.lower() in COMEDY_VENUES
+    if _STANDUP_WORDS.search(title) or (is_comedy_venue and not _CONCERT_WORDS.search(title)):
+        return "other", ["standup"]
+    if _BALLET_WORDS.search(title):
+        return "opera", genres
+    if _PLAY_WORDS.search(title):
+        return "theatre", genres
+    if _NOT_A_SHOW_WORDS.search(title):
+        return "other", genres
+    return category, genres
 
 
 # --- statuses ----------------------------------------------------------------
@@ -145,14 +186,43 @@ def clean_artist(title: str, performer: Optional[str] = None) -> str:
         name = _NOISE.sub("", name).strip()
     return name or (title or "").strip()
 
+def split_names(text: str) -> list[str]:
+    """'Кудрява, Барило та Скорик' -> ['Кудрява', 'Барило', 'Скорик']."""
+    parts = [p.strip() for p in re.split(r",|&|\s+та\s+|\s+і\s+", text, flags=re.IGNORECASE)]
+    # a part in quotes is a show title («Варвари Крижаної Планети»), not a person
+    return [p.strip("\"") for p in parts if p and not p.startswith(("«", "\"", "'"))]
+
+
 def names_after_colon(title: str) -> list[str]:
     """'Розгони: Кудрява, Барило, Михайлова' -> ['Кудрява', 'Барило', 'Михайлова'].
     Used for stand-up and shows, where the part before the colon is the show name."""
     if ":" not in title:
         return []
-    tail = title.split(":", 1)[1]
-    parts = re.split(r",|&|\s+та\s+|\s+і\s+", tail, flags=re.IGNORECASE)
-    return [p.strip(" «»\"") for p in parts if p.strip(" «»\"")]
+    return split_names(title.split(":", 1)[1])
+
+
+# A segment that is only a date: '21 ЛИСТОПАДА', '22.11', '2 грудня 2026'
+_DATE_SEGMENT = re.compile(
+    r"^\d{1,2}([./]\d{1,2}([./]\d{2,4})?|\s+(січ|лют|бер|квіт|трав|черв|лип|серп|вер|жовт|лист|груд)\w*(\s+\d{4})?)$",
+    re.IGNORECASE)
+# A segment that describes the show rather than listing people
+_GENERIC_SEGMENT = re.compile(r"концерт|шоу|стендап|вечір|оплеск|\bтур\b|презентац", re.IGNORECASE)
+
+
+def split_title(title: str) -> tuple[str, list[str]]:
+    """Concert.ua packs extra info into titles with ' | ':
+    'СТЕНДАП + НАКИДОНИ | ПРОНЮК, ОЗАРКІВ | 22.11' -> ('СТЕНДАП + НАКИДОНИ', ['ПРОНЮК', 'ОЗАРКІВ']).
+    Date segments are dropped, segments with names are returned as performers."""
+    parts = [p.strip() for p in title.split("|") if p.strip()]
+    if len(parts) < 2:
+        return title.strip(), []
+    names: list[str] = []
+    for part in parts[1:]:
+        if _DATE_SEGMENT.match(part) or _GENERIC_SEGMENT.search(part):
+            continue
+        names.extend(split_names(part))
+    return parts[0], names
+
 
 def _performers(obj: dict) -> list[str]:
     p = obj.get("performer")
@@ -193,7 +263,8 @@ def to_event(obj: dict, source: str, *, time_is_utc_clock: bool = False) -> Opti
 
     time_is_utc_clock=True is for sites that write Kyiv time as UTC (Karabas).
     """
-    title = (obj.get("name") or "").strip()
+    full_title = (obj.get("name") or "").strip()
+    title, title_names = split_title(full_title)
     starts_at, all_day = parse_datetime(obj.get("startDate") or "")
     if not title or not starts_at:
         return None
@@ -207,6 +278,7 @@ def to_event(obj: dict, source: str, *, time_is_utc_clock: bool = False) -> Opti
     venue = canonical_venue(_get(obj, "location", "name") or "")
     street = (_get(obj, "location", "address", "streetAddress") or "").strip() or None
     category, genres = category_and_genres(obj, title, venue)
+    category, genres = refine_category(category, genres, full_title, venue)
 
     performers = _performers(obj)
     artist = clean_artist(title, performers[0] if performers else None)
@@ -216,8 +288,8 @@ def to_event(obj: dict, source: str, *, time_is_utc_clock: bool = False) -> Opti
         artists = [clean_artist(p) for p in performers if clean_artist(p) != title]
 
     if category == "other":
-        # stand-up and shows: performers are listed after the colon, if at all
-        artists = names_after_colon(title)
+        # stand-up and shows: performers are listed after the colon or between '|', if at all
+        artists = title_names or names_after_colon(title)
 
     url = (obj.get("url") or _get(obj, "offers", "url") or "").strip()
     offers = obj.get("offers")
