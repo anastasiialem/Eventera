@@ -3,3 +3,11 @@ __pycache__/
 *.pyc
 .env
 .DS_Store
+
+# Node / frontend
+node_modules/
+dist/
+
+# Secrets
+.env.*
+!.env.example
