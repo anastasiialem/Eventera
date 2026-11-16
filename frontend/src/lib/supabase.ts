@@ -14,30 +14,54 @@ function requireSupabase(): SupabaseClient {
   return supabase
 }
 
+/** URL колбеку після підтвердження email / Google. `next` — куди повернути після входу. */
+export function callbackUrl(next?: string): string {
+  const base = `${window.location.origin}/auth/callback`
+  return next ? `${base}?next=${encodeURIComponent(next)}` : base
+}
+
 /**
- * Реєстрація. Ім'я йде в raw_user_meta_data.display_name — саме це поле
+ * Реєстрація. Ім'я кладемо в raw_user_meta_data.display_name — саме це поле
  * читає тригер handle_new_user() Ролі 3 і записує в profiles.display_name.
+ * `name` дублюємо для сумісності (так його називають Google та інші провайдери).
  */
-export async function signUp(email: string, password: string, name: string) {
+export async function signUp(email: string, password: string, name: string, next?: string) {
+  const trimmed = name.trim() || undefined
   return requireSupabase().auth.signUp({
     email,
     password,
     options: {
-      data: { display_name: name.trim() || undefined },
-      emailRedirectTo: `${window.location.origin}/auth/callback`,
+      data: { display_name: trimmed, name: trimmed },
+      emailRedirectTo: callbackUrl(next),
     },
   })
+}
+
+/** Повторно надіслати лист підтвердження реєстрації. */
+export async function resendSignupEmail(email: string, next?: string) {
+  return requireSupabase().auth.resend({ type: 'signup', email, options: { emailRedirectTo: callbackUrl(next) } })
 }
 
 export async function signIn(email: string, password: string) {
   return requireSupabase().auth.signInWithPassword({ email, password })
 }
 
-export async function signInWithGoogle() {
+export async function signInWithGoogle(next?: string) {
   return requireSupabase().auth.signInWithOAuth({
     provider: 'google',
-    options: { redirectTo: `${window.location.origin}/auth/callback` },
+    options: { redirectTo: callbackUrl(next) },
   })
+}
+
+/** Лист із посиланням на /auth/reset, де користувач задає новий пароль. */
+export async function sendPasswordReset(email: string) {
+  return requireSupabase().auth.resetPasswordForEmail(email, {
+    redirectTo: `${window.location.origin}/auth/reset`,
+  })
+}
+
+export async function updatePassword(password: string) {
+  return requireSupabase().auth.updateUser({ password })
 }
 
 export async function signOut() {
