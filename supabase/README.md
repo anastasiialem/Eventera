@@ -27,18 +27,21 @@ supabase db reset         # локально: міграції + seed.sql
 | `event_artists` | хто виступає (`position = 0` — хедлайнер) |
 | `sources` | сайти-джерела (`concert_ua`, `karabas`, …) |
 
-### Користувачі (`20261116140000_users_schema.sql`)
+### Користувачі (`20261116140000_users_schema.sql` + 150000 + 160000)
 
 | Таблиця | Що зберігає |
 |---|---|
 | `auth.users` | вбудована таблиця Supabase: email, пароль, вхід. Ми її не змінюємо |
-| `profiles` | наш профіль, створюється тригером при реєстрації; `email_alerts`, `telegram_alerts` |
-| `subscriptions` | «Я чекаю на…»: `artist`, `event` або `keyword` (вистава без артиста, напр. «Лускунчик») |
+| `profiles` | наш профіль, створюється тригером при реєстрації: `email` (копія з auth, змінювати напряму не можна), `email_alerts`, `telegram_alerts`, `remind_day_before` («Нагадати за день до події»), `max_price` («Тільки події до N ₴», null = без ліміту) |
+| `subscriptions` | «Я чекаю на…»: `artist`, `event` або `keyword` (шукає в назві події **і** в іменах/aliases артистів, напр. «Лускунчик» чи «Скрябін») |
 | `telegram_links` | `chat_id` користувача в боті |
 | `telegram_link_tokens` | одноразові токени для `t.me/<bot>?start=<token>` (живуть 15 хв) |
-| `notifications_sent` | що вже надіслано (user, event, channel), щоб не слати двічі |
+| `notifications_sent` | що вже надіслано (user, event, channel, kind = `new_event` / `reminder`), щоб не слати двічі |
 
-`notification_queue` — view для бекенду: кому, куди (email / chat_id) і про яку нову подію треба надіслати. Сповіщення приходять лише про події, які з'явились **після** підписки. Після відправки бекенд вставляє рядок у `notifications_sent`. Читати її може тільки `service_role`.
+Дві черги для бекенду (читати може тільки `service_role`), обидві повертають кому, куди (email / chat_id) і про яку подію:
+
+- `notification_queue` — «з'явилась нова подія»: лише події, що з'явились **після** підписки, і з урахуванням `max_price` (подію з невідомою ціною не відкидаємо). Після відправки: `insert into notifications_sent (user_id, event_id, channel) ...` (kind = `new_event` за замовчуванням).
+- `reminder_queue` — «завтра подія»: події з особистого списку (`subscriptions.kind = 'event'`), що починаються в найближчі 24 години, якщо в профілі `remind_day_before`. Перевіряти, наприклад, щогодини; після відправки — той самий insert з `kind = 'reminder'`.
 
 RLS: кожен користувач бачить і змінює лише свої профіль, підписки та прив'язку Telegram.
 
