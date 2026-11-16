@@ -116,3 +116,25 @@ def test_venue_aliases():
         == "Львівська національна опера"
     assert canonical_venue("Міський палац культури ім. Г. Хоткевича") == "Палац культури ім. Гната Хоткевича"
     assert canonical_venue("ТРЦ  VICTORIA GARDENS") == "ТРЦ VICTORIA GARDENS"
+
+
+def test_concert_artists():
+    from parser.normalize import concert_artists
+    assert concert_artists("Концерт гурту DiZeX в Оплесках") == ["DiZeX"]
+    assert concert_artists("Гурт BOYKY «Бойківське Різдво»") == ["BOYKY"]
+    assert concert_artists("Гурт Скрябін. Про любов. НА БІС!") == ["Скрябін"]
+    assert concert_artists("Благодійний Концерт «Baryk, Olsi, Linz»") == ["Baryk", "Olsi", "Linz"]
+    assert concert_artists("ROMOZA концерт у Львові. Презентація альбому") == ["ROMOZA"]
+    assert concert_artists("KADNAY з великим весняним концертом у Львові") == ["KADNAY"]
+    assert concert_artists("ZWYNTAR у Львівській опері") == ["ZWYNTAR"]
+    assert concert_artists("Степан Галябарда - «Живу. Люблю.І Вірую»") == ["Степан Галябарда"]
+    assert concert_artists("Ілля Найда «Колядуємо Разом»") == ["Ілля Найда"]
+    assert concert_artists("VICTORIA NIRO концерт у супроводі симфонічного оркестру") == ["VICTORIA NIRO"]
+    # tributes and themed shows: nobody to follow
+    assert concert_artists("Гра престолів при свічках") == []
+    assert concert_artists("Eminem. Tribute Show у виконанні симфонічного оркестру") == []
+    assert concert_artists("УКРАЇНСЬКІ РОК-ХІТИ У ВИКОНАННІ ОРКЕСТРУ") == []
+    assert concert_artists("Різдво з Наталкою Карпою") == []
+    assert concert_artists("Казковий мюзикл «Вкрадений час»") == []
+    # open mic is a format, not a person
+    assert _ev("Стендап: ОПЕНМАЙК", "CULT Comedy Hall").artists == []
