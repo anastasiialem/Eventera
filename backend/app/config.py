@@ -36,7 +36,9 @@ def load() -> Settings:
         bot_token=_required("TELEGRAM_BOT_TOKEN"),
         webhook_secret=_required("TELEGRAM_WEBHOOK_SECRET"),
         internal_api_key=_required("INTERNAL_API_KEY"),
-        public_base_url=(os.environ.get("PUBLIC_BASE_URL") or "").rstrip("/") or None,
+        # на Render адресу сервісу дає сам Render (RENDER_EXTERNAL_URL), вручну задавати не треба
+        public_base_url=(os.environ.get("PUBLIC_BASE_URL") or os.environ.get("RENDER_EXTERNAL_URL") or "")
+        .rstrip("/") or None,
         frontend_url=(os.environ.get("FRONTEND_URL") or "http://localhost:5173").rstrip("/"),
         admin_chat_ids=frozenset(
             int(x) for x in (os.environ.get("ADMIN_CHAT_IDS") or "").replace(" ", "").split(",") if x
