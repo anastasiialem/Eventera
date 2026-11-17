@@ -9,6 +9,7 @@ import type {
   Event,
   EventFeedRow,
   EventFilters,
+  EventGenre,
   FeedbackInput,
   Period,
   Profile,
@@ -137,16 +138,57 @@ function periodRange(period: Period, now = new Date()): { from: Date; to: Date }
   return { from: now, to }
 }
 
+const TZ = 'Europe/Kyiv'
+/** «Київський» настінний час моменту d, записаний як UTC (для арифметики з датами). */
+function kyivWall(d: Date): Date {
+  const parts = new Intl.DateTimeFormat('en-US', {
+    timeZone: TZ,
+    hourCycle: 'h23',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
+  }).formatToParts(d)
+  const get = (t: string) => Number(parts.find((p) => p.type === t)?.value ?? 0)
+  return new Date(Date.UTC(get('year'), get('month') - 1, get('day'), get('hour'), get('minute'), get('second')))
+}
+
+const kyivOffsetMs = (d: Date) => kyivWall(d).getTime() - Math.floor(d.getTime() / 1000) * 1000
+
+/** Північ за Києвом через `addDays` днів від дня моменту `d` (з урахуванням переходу на літній час). */
+function kyivMidnight(d: Date, addDays = 0): Date {
+  const wall = kyivWall(d)
+  const wallMidnight = Date.UTC(wall.getUTCFullYear(), wall.getUTCMonth(), wall.getUTCDate() + addDays)
+  const guess = new Date(wallMidnight - kyivOffsetMs(d))
+  return new Date(wallMidnight - kyivOffsetMs(guess))
+}
+
+/** Діапазон дат для фільтрів: when (сьогодні / вихідні) → period → null (усі майбутні). */
+export function dateRange(f: Pick<EventFilters, 'period' | 'when'>, now = new Date()): { from: Date; to: Date } | null {
+  if (f.when === 'today') return { from: kyivMidnight(now), to: kyivMidnight(now, 1) }
+  if (f.when === 'weekend') {
+    const weekday = kyivWall(now).getUTCDay() // 0 — неділя
+    const toSaturday = weekday === 0 ? -1 : 6 - weekday
+    const saturday = kyivMidnight(now, toSaturday)
+    const today = kyivMidnight(now)
+    return { from: saturday > today ? saturday : today, to: kyivMidnight(now, toSaturday + 2) }
+  }
+  if (f.period) return periodRange(f.period, now)
+  return null
+}
+
 /** Ті самі фільтри для моків, що й для Supabase. */
 export function filterEvents(events: Event[], f: EventFilters = {}): Event[] {
   let list = [...events]
-  if (f.period) {
-    const { from, to } = periodRange(f.period)
-    list = list.filter((e) => {
-      const t = new Date(e.starts_at).getTime()
-      return t >= from.getTime() && t <= to.getTime()
-    })
-  }
+  const range = dateRange(f)
+  const fromMs = range ? range.from.getTime() : Date.now()
+  const toMs = range ? range.to.getTime() : Infinity
+  list = list.filter((e) => {
+    const t = new Date(e.starts_at).getTime()
+    return t >= fromMs && t < toMs
+  })
   if (f.category) list = list.filter((e) => e.category === f.category)
   if (f.free) list = list.filter((e) => e.is_free)
   if (f.price_max !== undefined) list = list.filter((e) => e.price_min === null || e.price_min <= f.price_max!)
@@ -166,6 +208,39 @@ export function filterEvents(events: Event[], f: EventFilters = {}): Event[] {
 
 /** Екранування для ilike: % і _ — службові символи. */
 const likeEscape = (s: string) => s.replace(/[\\%_]/g, (m) => `\\${m}`)
+
+/** Значення для PostgREST .or(): прибираємо службові символи (кома, дужки, лапки, wildcard-и). */
+const orSafe = (s: string) =>
+  s
+    .replace(/[,()"'\\%_*:]/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim()
+
+/** id подій, де виступає артист, чия назва містить term. Помилка → [] (пошук працює по назві й місцю). */
+async function searchArtistEventIds(term: string): Promise<number[]> {
+  try {
+    const { data: artists, error } = await supabase!
+      .from('artists')
+      .select('id')
+      .ilike('name', `%${likeEscape(term)}%`)
+      .limit(50)
+    if (error) throw error
+    if (!artists?.length) return []
+    const { data: links, error: linksErr } = await supabase!
+      .from('event_artists')
+      .select('event_id')
+      .in(
+        'artist_id',
+        artists.map((a) => a.id),
+      )
+      .limit(500)
+    if (linksErr) throw linksErr
+    return [...new Set((links ?? []).map((l) => Number(l.event_id)))]
+  } catch (err) {
+    console.warn('[eventera] searchArtistEventIds: шукаю лише по назві й місцю', err)
+    return []
+  }
+}
 
 /** Розмір сторінки афіші на головній. */
 export const EVENTS_PAGE_SIZE = 12
@@ -199,17 +274,21 @@ export async function getEvents(filters: EventFilters = {}): Promise<EventsPage>
         .select(EVENT_FEED_COLUMNS, { count: 'exact' })
         .order('starts_at', { ascending: true })
         .order('id', { ascending: true })
-      if (filters.period) {
-        const { from, to } = periodRange(filters.period)
-        q = q.gte('starts_at', from.toISOString()).lte('starts_at', to.toISOString())
-      } else {
-        q = q.gte('starts_at', new Date().toISOString())
-      }
+      const range = dateRange(filters)
+      if (range) q = q.gte('starts_at', range.from.toISOString()).lt('starts_at', range.to.toISOString())
+      else q = q.gte('starts_at', new Date().toISOString())
       if (filters.category) q = q.eq('category', filters.category)
       if (filters.free) q = q.eq('is_free', true)
       if (filters.price_max !== undefined) q = q.lte('price_min', filters.price_max)
       if (filters.genre) q = q.contains('genres', [{ slug: filters.genre }])
-      if (filters.q?.trim()) q = q.ilike('title', `%${likeEscape(filters.q.trim())}%`)
+      const term = orSafe(filters.q ?? '')
+      if (term) {
+        // Пошук по назві, місцю та іменах артистів (artists → event_artists → id події).
+        const ids = await searchArtistEventIds(term)
+        const parts = [`title.ilike.*${term}*`, `venue_name.ilike.*${term}*`]
+        if (ids.length) parts.push(`id.in.(${ids.join(',')})`)
+        q = q.or(parts.join(','))
+      }
       if (limit) q = q.range(offset, offset + limit - 1)
       const { data, error, count } = await q
       if (error) throw error
@@ -220,6 +299,42 @@ export async function getEvents(filters: EventFilters = {}): Promise<EventsPage>
       const all = filterEvents(mockEvents, filters)
       return { items: all.slice(offset, limit ? offset + limit : undefined), total: all.length, offset }
     },
+  )
+}
+
+/** Жанри для фільтра «Усі жанри» (таблиця genres, фільтр за slug). */
+export async function getGenres(): Promise<EventGenre[]> {
+  return readChain<EventGenre[]>(
+    'getGenres',
+    null,
+    dbOr(async () => {
+      const { data, error } = await supabase!.from('genres').select('slug, name').order('name')
+      if (error) throw error
+      return (data ?? []) as EventGenre[]
+    }),
+    () => {
+      const map = new Map<string, EventGenre>()
+      for (const e of mockEvents) for (const g of e.genres) map.set(g.slug, g)
+      return [...map.values()].sort((a, b) => a.name.localeCompare(b.name, 'uk'))
+    },
+  )
+}
+
+/** Коли парсер востаннє знайшов нову подію: max(first_seen_at). null — невідомо. */
+export async function getLastUpdated(): Promise<string | null> {
+  return readChain<string | null>(
+    'getLastUpdated',
+    null,
+    dbOr(async () => {
+      const { data, error } = await supabase!
+        .from('event_feed')
+        .select('first_seen_at')
+        .order('first_seen_at', { ascending: false })
+        .limit(1)
+      if (error) throw error
+      return (data?.[0]?.first_seen_at as string | undefined) ?? null
+    }),
+    () => null,
   )
 }
 
