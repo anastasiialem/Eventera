@@ -35,7 +35,8 @@ def connect():
     url = os.environ.get("SUPABASE_URL")
     key = os.environ.get("SUPABASE_SERVICE_ROLE_KEY")
     if not url or not key:
-        raise SystemExit("SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY is missing from backend/.env")
+        raise SystemExit("SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY is not set: put them in backend/.env "
+                         "locally, or add them as repository secrets for GitHub Actions")
     return create_client(url, key)
 
 

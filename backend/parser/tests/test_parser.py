@@ -145,3 +145,15 @@ def test_no_dangling_connector():
     assert clean_artist("Михайло Кукуюк & концерт") == "Михайло Кукуюк"
     assert clean_artist("APLAY x SCHILLER") == "APLAY x SCHILLER"
     assert clean_artist("DiZeX") == "DiZeX"
+
+
+def test_source_selection(monkeypatch):
+    import pytest
+    from parser.run import selected_sources
+    monkeypatch.delenv("PARSER_SOURCES", raising=False)
+    assert [s.SOURCE for s in selected_sources()] == ["concert_ua", "karabas"]
+    monkeypatch.setenv("PARSER_SOURCES", "karabas")
+    assert [s.SOURCE for s in selected_sources()] == ["karabas"]
+    monkeypatch.setenv("PARSER_SOURCES", "kontramarka")
+    with pytest.raises(SystemExit):
+        selected_sources()
