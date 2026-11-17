@@ -22,6 +22,7 @@ export function Footer() {
             <li>Concert.ua · Karabas</li>
             <li>Сайти театрів і закладів</li>
             <li>Telegram-канали з афішами</li>
+            <li className="pt-2 text-xs text-white/50">Фото: Pinterest (автори в README)</li>
           </ul>
         </div>
 

@@ -367,21 +367,9 @@ Concert.ua блокує сервери GitHub (403), тому в Actions пар�
 
 ## Фото й ліцензії
 
-<!-- TODO: заповнити авторів, джерела й ліцензії для кожного фото -->
-
-| Файл (`frontend/public/…`) | Автор | Джерело | Ліцензія |
-|---|---|---|---|
-| `images/hero/hero-1.jpg` … `hero-10.jpg` | TODO | TODO | TODO |
-| `images/categories/concert-1.jpg` … `concert-4.jpg` | TODO | TODO | TODO |
-| `images/categories/theatre-1.jpg` | TODO | TODO | TODO |
-| `images/categories/opera-1.jpg` … `opera-3.jpg` | TODO | TODO | TODO |
-| `images/categories/festival-1.jpg` | TODO | TODO | TODO |
-| `images/auth/cover.jpg` | TODO | TODO | TODO |
-| `images/guitar.png` | TODO | TODO | TODO |
-| `og-image.jpg` | TODO | TODO | TODO |
-
-Фото подій на картках (`image_url`) — офіційні зображення з сайтів-джерел (Karabas, Concert.ua). Авторські
-права належать організаторам. Сайт показує їх з посиланням на сторінку продажу квитків.
+Фото для банера, сторінки входу та категорій взято з Pinterest. Автори: The New York Times, karina t, a.secret,
+sheda, julia.msli, inna. Використано лише в навчальному прототипі; права на фото належать авторам.
+Фото подій — з офіційних сторінок Concert.ua і Karabas.
 
 Шрифти — [Google Fonts](https://fonts.google.com/) під SIL Open Font License: Prata, Onest, Doto, Homemade Apple
 (Homemade Apple — Apache License 2.0). Іконки — [Lucide](https://lucide.dev/) (ISC).
