@@ -38,4 +38,5 @@ jobs:
         env:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          PARSER_SOURCES: karabas    # Concert.ua blocks GitHub's servers (403)
         run: python -m parser.run --db

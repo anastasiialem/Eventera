@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import sys
 from pathlib import Path
 
@@ -17,13 +18,26 @@ from .sources import concert_ua, karabas
 SOURCES = [concert_ua, karabas]  # add the theatre source here later
 
 
+def selected_sources() -> list:
+    """All sources, or only those listed in PARSER_SOURCES (e.g. "karabas").
+    GitHub Actions sets it because Concert.ua blocks GitHub's servers with 403."""
+    wanted = os.environ.get("PARSER_SOURCES", "").replace(" ", "")
+    if not wanted:
+        return SOURCES
+    names = set(wanted.split(","))
+    unknown = names - {s.SOURCE for s in SOURCES}
+    if unknown:
+        sys.exit(f"Unknown source(s) in PARSER_SOURCES: {', '.join(sorted(unknown))}")
+    return [s for s in SOURCES if s.SOURCE in names]
+
+
 def log(msg: str) -> None:
     print(msg, file=sys.stderr)
 
 
 def collect() -> list:
     events = []
-    for src in SOURCES:
+    for src in selected_sources():
         try:
             found = src.fetch()
             log(f"{src.SOURCE}: found {len(found)} events")
