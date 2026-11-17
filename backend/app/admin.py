@@ -1,6 +1,6 @@
 """Адмінка бота (/admin) — лише для chat_id з ADMIN_CHAT_IDS.
 
-📊 Статистика · 📣 Написати всім · 🔔 Запустити розсилку зараз
+📊 Статистика · 💜 Заявки VIP · 📣 Написати всім · 🔔 Запустити розсилку зараз
 """
 from __future__ import annotations
 
@@ -16,14 +16,19 @@ from aiogram.filters import Command
 from aiogram.filters.callback_data import CallbackData
 from aiogram.types import CallbackQuery, InlineKeyboardButton, InlineKeyboardMarkup, Message
 
-from . import notify
+from . import notify, vip
 from .supabase import Supabase
 
 log = logging.getLogger(__name__)
 
 
 class Admin(CallbackData, prefix="ad"):
-    action: str     # menu | stats | bc | bc_send | bc_cancel | notify
+    action: str     # menu | stats | vip | bc | bc_send | bc_cancel | notify
+
+
+class VipReq(CallbackData, prefix="vr"):
+    action: str     # ok | no
+    id: int
 
 
 def _kb(*rows: list[tuple[str, str]]) -> InlineKeyboardMarkup:
@@ -32,6 +37,7 @@ def _kb(*rows: list[tuple[str, str]]) -> InlineKeyboardMarkup:
 
 
 MENU_KB = _kb([("📊 Статистика", "stats")],
+              [("💜 Заявки VIP", "vip")],
               [("📣 Написати всім", "bc")],
               [("🔔 Запустити розсилку зараз", "notify")])
 BACK_KB = _kb([("← Меню", "menu")])
@@ -64,6 +70,36 @@ async def stats_text(db: Supabase) -> str:
         f"📨 Надіслано сповіщень: <b>{sent}</b>\n\n"
         f"🔥 <b>Найочікуваніші артисти</b>\n{top_lines}"
     )
+
+
+async def vip_list_view(db: Supabase) -> tuple[str, InlineKeyboardMarkup]:
+    reqs = await vip.pending(db)
+    nav = [InlineKeyboardButton(text="🔄 Оновити", callback_data=Admin(action="vip").pack()),
+           InlineKeyboardButton(text="← Меню", callback_data=Admin(action="menu").pack())]
+    if not reqs:
+        return "💜 <b>Заявки VIP</b>\n\nНових заявок немає ✨", InlineKeyboardMarkup(inline_keyboard=[nav])
+    lines = [f"{i}. <code>{html.escape(r['email'])}</code> — {notify.format_when(r['created_at'])}"
+             for i, r in enumerate(reqs, 1)]
+    rows = [[InlineKeyboardButton(text=f"✅ {i}. {r['email'][:28]}", callback_data=VipReq(action="ok", id=r["id"]).pack()),
+             InlineKeyboardButton(text="❌", callback_data=VipReq(action="no", id=r["id"]).pack())]
+            for i, r in enumerate(reqs, 1)]
+    text = ("💜 <b>Заявки VIP</b> (чекають підтвердження)\n\n" + "\n".join(lines) +
+            f"\n\nЗвір email з коментарями в банці «Eventera VIP» (39 ₴).\n"
+            f"✅ — VIP на {vip.VIP_DAYS} днів, ❌ — оплату не знайдено.")
+    return text, InlineKeyboardMarkup(inline_keyboard=rows + [nav])
+
+
+async def ping_vip_requests(bot: Bot, db: Supabase, admin_ids: frozenset[int]) -> int:
+    """Щогодини (з /internal/notify): якщо є заявки, що чекають, — нагадати адмінам."""
+    n = await vip.count_pending(db)
+    if n:
+        for chat_id in admin_ids:
+            try:
+                await bot.send_message(chat_id, f"💜 Нових заявок VIP: <b>{n}</b>",
+                                       reply_markup=_kb([("Переглянути", "vip")]))
+            except Exception:
+                log.warning("Не вдалось нагадати адміну %s про заявки VIP", chat_id)
+    return n
 
 
 def make_admin_router(db: Supabase, admin_ids: frozenset[int], sender_factory, frontend_url: str) -> Router:
@@ -99,6 +135,49 @@ def make_admin_router(db: Supabase, admin_ids: frozenset[int], sender_factory, f
     async def stats_cb(call: CallbackQuery) -> None:
         await call.message.edit_text(await stats_text(db), reply_markup=_kb([("🔄 Оновити", "stats"), ("← Меню", "menu")]))
         await call.answer()
+
+    # ---------- 💜 заявки VIP ----------
+
+    @router.callback_query(Admin.filter(F.action == "vip"))
+    async def vip_cb(call: CallbackQuery) -> None:
+        text, markup = await vip_list_view(db)
+        try:
+            await call.message.edit_text(text, reply_markup=markup)
+        except TelegramBadRequest:
+            pass                     # «message is not modified»
+        await call.answer()
+
+    @router.callback_query(VipReq.filter())
+    async def vip_decide(call: CallbackQuery, callback_data: VipReq, bot: Bot) -> None:
+        if callback_data.action == "ok":
+            d = await vip.approve(db, callback_data.id)
+            if d:
+                until = notify.format_date(d.vip_until.isoformat())
+                note = f"✅ {d.email}: VIP до {until}"
+                user_text = (f"💜 <b>VIP активовано до {until}!</b> Дякуємо за підтримку.\n"
+                             "Тепер доступні необмежений список, нагадування за день і ліміт ціни — /settings")
+        else:
+            d = await vip.reject(db, callback_data.id)
+            if d:
+                note = f"❌ {d.email}: відхилено"
+                user_text = ("Ми не знайшли твою оплату VIP 😔 Перевір, чи вказав(-ла) email у коментарі "
+                             f"до платежу, і надішли заявку ще раз: {frontend_url}/support")
+        if not d:
+            await call.answer("Цю заявку вже оброблено", show_alert=True)
+        else:
+            chat_id = await vip.chat_for_user(db, d.user_id)
+            if chat_id:
+                try:
+                    await bot.send_message(chat_id, user_text)
+                    note += " · написала в Telegram"
+                except Exception:
+                    log.warning("Не вдалось повідомити %s про VIP", chat_id)
+            await call.answer(note, show_alert=True)
+        text, markup = await vip_list_view(db)
+        try:
+            await call.message.edit_text(text, reply_markup=markup)
+        except TelegramBadRequest:
+            pass
 
     # ---------- 📣 написати всім ----------
 
