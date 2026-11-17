@@ -67,9 +67,21 @@ def make_router(db: Supabase, frontend_url: str) -> Router:
     not_linked = ("Спершу підключи свій акаунт Eventera: увійди на сайті й натисни «Сповіщення в Telegram» — "
                   f"{waitlist_url}\nПісля цього список можна вести прямо тут.")
     _pending: dict[int, str] = {}   # chat_id -> останній пошуковий запит (для кнопки «підписатись на слово»)
+    vip_text = f"Це VIP-функція, оформити: {frontend_url}/support"
+    limit_text = (f"У безкоштовному тарифі — до {waitlist.FREE_LIMIT} артистів у «Я чекаю на…». "
+                  f"Прибери когось через /list або оформи VIP (необмежений список): {frontend_url}/support")
 
     async def need_user(chat_id: int) -> str | None:
         return await waitlist.user_for_chat(db, chat_id)
+
+    async def over_free_limit(user_id: str) -> bool:
+        if waitlist.is_vip(await waitlist.get_settings(db, user_id)):
+            return False
+        return await waitlist.count_follows(db, user_id) >= waitlist.FREE_LIMIT
+
+    async def vip_only(call: CallbackQuery) -> None:
+        await call.answer("Це VIP-функція 💜", show_alert=False)
+        await call.message.answer(vip_text)
 
     # ---------- прив'язка ----------
 
@@ -110,7 +122,7 @@ def make_router(db: Supabase, frontend_url: str) -> Router:
         await message.answer(
             "Просто напиши ім'я артиста або назву вистави — я знайду й додам у твій список.\n\n"
             "/add &lt;назва&gt; — те саме\n/list — мій список (з кнопками видалення)\n"
-            "/settings — нагадування за день, ліміт ціни, вимкнути сповіщення\n/stop — відключити Telegram\n\n"
+            "/settings — сповіщення; для VIP — нагадування за день і ліміт ціни\n/stop — відключити Telegram\n\n"
             f"Сайт: {waitlist_url}"
         )
 
@@ -149,6 +161,10 @@ def make_router(db: Supabase, frontend_url: str) -> Router:
         if not user_id:
             await call.answer("Спершу підключи акаунт на сайті", show_alert=True)
             return
+        if await over_free_limit(user_id):
+            await call.message.edit_text(limit_text)
+            await call.answer()
+            return
         added = await waitlist.add_artist(db, user_id, callback_data.artist_id)
         text = (f"Додала 🎤 <b>{html.escape(added.label)}</b> ✅ Напишу, щойно з'явиться концерт у Львові."
                 if added.ok else f"🎤 {html.escape(added.label)} уже є у твоєму списку.")
@@ -162,6 +178,10 @@ def make_router(db: Supabase, frontend_url: str) -> Router:
         if not user_id or not query:
             await call.answer("Напиши запит ще раз", show_alert=True)
             return
+        if await over_free_limit(user_id):
+            await call.message.edit_text(limit_text)
+            await call.answer()
+            return
         added = await waitlist.add_keyword(db, user_id, query)
         await call.message.edit_text(
             f"Додала 🔎 «{html.escape(added.label)}» ✅" if added.ok else f"«{html.escape(added.label)}» уже є у списку.")
@@ -173,8 +193,11 @@ def make_router(db: Supabase, frontend_url: str) -> Router:
         if not user_id:
             await call.answer("Спершу підключи акаунт на сайті", show_alert=True)
             return
-        await waitlist.add_event(db, user_id, callback_data.event_id)
         settings = await waitlist.get_settings(db, user_id)
+        if not waitlist.is_vip(settings):
+            await vip_only(call)
+            return
+        await waitlist.add_event(db, user_id, callback_data.event_id)
         if not settings.get("remind_day_before"):
             await waitlist.update_settings(db, user_id, remind_day_before=True)
         await call.answer("Нагадаю за день до події ⏰", show_alert=False)
@@ -216,24 +239,32 @@ def make_router(db: Supabase, frontend_url: str) -> Router:
     # ---------- налаштування ----------
 
     def settings_view(s: dict) -> tuple[str, InlineKeyboardMarkup]:
-        price = s.get("max_price")
+        vip = waitlist.is_vip(s)
+        price = s.get("max_price") if vip else None
         yes = lambda v: "✅" if v else "▫️"   # noqa: E731
+        lock = "" if vip else "🔒 "
         rows = [
-            [InlineKeyboardButton(text=f"{yes(s.get('remind_day_before'))} Нагадувати за день до події",
+            [InlineKeyboardButton(text=f"{lock}{yes(vip and s.get('remind_day_before'))} Нагадувати за день до події",
                                   callback_data=Setting(name="remind").pack())],
             [InlineKeyboardButton(text=f"{yes(s.get('telegram_alerts'))} Сповіщення в Telegram",
                                   callback_data=Setting(name="alerts").pack())],
         ]
         # ціни — по дві кнопки в рядку, інакше Telegram обрізає підписи на телефоні
         price_buttons = [
-            InlineKeyboardButton(text=f"{'✅ ' if price == p else ''}{p} ₴",
+            InlineKeyboardButton(text=f"{lock}{'✅ ' if price == p else ''}{p} ₴",
                                  callback_data=Setting(name="price", value=p).pack())
             for p in waitlist.PRICE_OPTIONS
         ] + [InlineKeyboardButton(text=f"{'✅ ' if price is None else ''}Без ліміту",
                                   callback_data=Setting(name="price", value=0).pack())]
         rows += [price_buttons[i:i + 2] for i in range(0, len(price_buttons), 2)]
         limit = f"до {price} ₴" if price else "без ліміту"
-        return (f"<b>Налаштування</b>\nЛіміт ціни для сповіщень: {limit}", InlineKeyboardMarkup(inline_keyboard=rows))
+        if vip:
+            until = notify.format_date(s["vip_until"])
+            head = f"<b>Налаштування</b> · 💜 VIP до {until}\nЛіміт ціни для сповіщень: {limit}"
+        else:
+            head = (f"<b>Налаштування</b>\n🔒 Нагадування за день і ліміт ціни — у VIP (39 ₴/міс): "
+                    f"{frontend_url}/support")
+        return (head, InlineKeyboardMarkup(inline_keyboard=rows))
 
     @router.message(Command("settings"))
     async def settings_cmd(message: Message) -> None:
@@ -251,6 +282,9 @@ def make_router(db: Supabase, frontend_url: str) -> Router:
             await call.answer()
             return
         s = await waitlist.get_settings(db, user_id)
+        if callback_data.name in ("remind", "price") and not waitlist.is_vip(s):
+            await vip_only(call)
+            return
         if callback_data.name == "remind":
             await waitlist.update_settings(db, user_id, remind_day_before=not s.get("remind_day_before"))
         elif callback_data.name == "alerts":

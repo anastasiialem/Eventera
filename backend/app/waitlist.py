@@ -7,12 +7,14 @@ from __future__ import annotations
 
 import re
 from dataclasses import dataclass
+from datetime import datetime, timezone
 
 import httpx
 
 from .supabase import Supabase
 
 PRICE_OPTIONS = (300, 500, 1000)
+FREE_LIMIT = 3          # безкоштовний тариф: до 3 артистів / слів у «Я чекаю на…» (як на сайті)
 
 
 async def user_for_chat(db: Supabase, chat_id: int) -> str | None:
@@ -98,10 +100,27 @@ async def remove_subscription(db: Supabase, user_id: str, sub_id: int) -> None:
     await db.delete("subscriptions", {"id": f"eq.{sub_id}", "user_id": f"eq.{user_id}"})
 
 
+async def count_follows(db: Supabase, user_id: str) -> int:
+    """Скільки артистів і слів у списку (події з «⏰ Нагадати» — окремо, це VIP)."""
+    return await db.count("subscriptions", {"user_id": f"eq.{user_id}", "kind": "in.(artist,keyword)"})
+
+
+def is_vip(settings: dict, now: datetime | None = None) -> bool:
+    """VIP активний, якщо profiles.vip_until > now()."""
+    raw = settings.get("vip_until")
+    if not raw:
+        return False
+    until = datetime.fromisoformat(raw)
+    if until.tzinfo is None:
+        until = until.replace(tzinfo=timezone.utc)
+    return until > (now or datetime.now(timezone.utc))
+
+
 async def get_settings(db: Supabase, user_id: str) -> dict:
     rows = await db.select("profiles", {
-        "id": f"eq.{user_id}", "select": "remind_day_before,max_price,telegram_alerts"})
-    return rows[0] if rows else {"remind_day_before": False, "max_price": None, "telegram_alerts": True}
+        "id": f"eq.{user_id}", "select": "remind_day_before,max_price,telegram_alerts,vip_until"})
+    return rows[0] if rows else {"remind_day_before": False, "max_price": None, "telegram_alerts": True,
+                                 "vip_until": None}
 
 
 async def update_settings(db: Supabase, user_id: str, **values) -> None:
