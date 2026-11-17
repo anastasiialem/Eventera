@@ -4,18 +4,10 @@ import { useState } from 'react'
 import { getEvents } from '../../lib/api'
 import { useAuth } from '../../lib/auth-context'
 import { useSubscriptions } from '../../lib/use-subscriptions'
-import type { Event, EventCategory, Subscription } from '../../types'
+import type { Event, Subscription } from '../../types'
 import { Button } from '../ui/Button'
 
 const DISMISSED_KEY = 'eventera:waited-banner-dismissed'
-
-const NEW_THING: Record<EventCategory, string> = {
-  concert: 'з’явився новий концерт',
-  theatre: 'з’явилася нова вистава',
-  festival: 'з’явився новий фестиваль',
-  opera: 'з’явилася нова вистава',
-  other: 'з’явилася нова подія',
-}
 
 function readDismissed(): number[] {
   try {
@@ -56,7 +48,7 @@ function findHit(events: Event[], subscriptions: Subscription[], dismissed: numb
   return null
 }
 
-/** «Ти чекала на «…» — з’явився новий концерт». Лише залогіненим, закривається хрестиком. */
+/** «Нова подія від «…» — ти чекаєш на цього артиста». Лише залогіненим, закривається хрестиком. */
 export function WaitedBanner() {
   const { user } = useAuth()
   const { subscriptions } = useSubscriptions()
@@ -88,7 +80,7 @@ export function WaitedBanner() {
         <Bell size={18} />
       </span>
       <p className="min-w-0 flex-1 text-sm text-ink sm:text-[15px]">
-        Ти чекала на «{hit.label}» — {NEW_THING[hit.event.category]}.
+        Нова подія від «{hit.label}» — ти чекаєш на цього артиста.
       </p>
       <div className="flex w-full items-center justify-end gap-1 sm:w-auto">
         <Button to={`/event/${hit.event.id}`} className="flex-1 sm:flex-none">

@@ -4,12 +4,13 @@ import { useEffect, useState, type ReactNode } from 'react'
 import { getGenres } from '../../lib/api'
 import { cn } from '../../lib/cn'
 import { eventsWord, formatAgo } from '../../lib/format'
-import type { EventCategory, Period } from '../../types'
+import type { EventCategory } from '../../types'
 import { Pill, Segment } from '../ui/Pill'
 import { Skeleton } from '../ui/Skeleton'
-import { useHomeFilters, type PriceOption } from './use-home-filters'
+import { useHomeFilters, type PeriodOption, type PriceOption } from './use-home-filters'
 
-const PERIOD_OPTIONS: { value: Period; label: string }[] = [
+const PERIOD_OPTIONS: { value: PeriodOption; label: string }[] = [
+  { value: 'all', label: 'Усі' },
   { value: 'week', label: 'Цей тиждень' },
   { value: 'month', label: 'Цей місяць' },
   { value: 'season', label: 'Сезон' },
@@ -113,7 +114,7 @@ export function AfishaFilters({ total, loading, updatedAt }: Props) {
           <Segment
             label="Період"
             options={PERIOD_OPTIONS}
-            value={(state.period ?? '') as Period}
+            value={(state.period ?? '') as PeriodOption}
             onChange={(period) => update({ period, when: null })}
           />
         </div>
