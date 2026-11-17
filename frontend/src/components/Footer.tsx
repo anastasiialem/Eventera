@@ -20,8 +20,7 @@ export function Footer() {
           <h2 className="mb-3 font-sans text-xs font-medium uppercase tracking-[.18em] text-white/50">Джерела</h2>
           <ul className="space-y-1.5 text-sm">
             <li>Concert.ua · Karabas</li>
-            <li>Сайти театрів і закладів</li>
-            <li>Telegram-канали з афішами</li>
+            <li className="pt-2 text-xs text-white/50">Фото: Pinterest (автори в README)</li>
           </ul>
         </div>
 

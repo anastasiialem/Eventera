@@ -3,7 +3,7 @@
 ## Продукт
 Eventera — вебсайт, що збирає концерти й театральні події Львова з різних джерел
 (Concert.ua, Karabas, сайти театрів і закладів, Telegram-канали) і показує їх в одному місці.
-Користувач додає артистів у список «Я чекаю на…» і отримує сповіщення (Telegram / email),
+Користувач додає артистів у список «Я чекаю на…» і отримує сповіщення в Telegram,
 щойно з'являється їхня подія у Львові. Кнопка донату — банка monobank на «Повернись живим».
 Цільова аудиторія — студенти Львова. Повний опис: `design/Event_era.pdf`.
 
@@ -26,7 +26,8 @@ Eventera — вебсайт, що збирає концерти й театра�
 ## Стек frontend
 Vite + React + TypeScript, Tailwind CSS, react-router-dom, @tanstack/react-query,
 @supabase/supabase-js (Auth: email+пароль, опційно Google), lucide-react, framer-motion.
-Деплой: Vercel, Root Directory = `frontend`, SPA rewrite у `frontend/vercel.json`.
+Деплой: Vercel-проєкт `eventera-lviv`, через CLI з папки `frontend/` (`cd frontend && npx vercel --prod`);
+Root Directory у налаштуваннях Vercel = «.» (CLI завантажує вміст `frontend/`). SPA rewrite у `frontend/vercel.json`.
 
 Змінні середовища (frontend/.env.local):
 VITE_SUPABASE_URL, VITE_SUPABASE_ANON_KEY, VITE_API_URL (поки порожня), VITE_BACKEND_URL, VITE_DONATE_URL,
@@ -142,10 +143,10 @@ POST ${VITE_BACKEND_URL}/api/telegram/link (Authorization: Bearer <access_token>
   вібрує й пульсує; спільне для плитки «Задонать!», блоку донату на сторінці події і /support.
 - Свіжість: profile, subscriptions, telegram_links, vip_requests, налаштування сповіщень — `FRESH_QUERY`
   (`src/lib/fresh-query.ts`: staleTime 10 с, refetchOnWindowFocus 'always'), бо змінюються ботом / SQL.
-- **«Підписатися» = платна VIP-підписка 39 ₴/міс.** Сповіщення про нові події (Telegram/email) — безкоштовні.
+- **«Підписатися» = платна VIP-підписка 39 ₴/міс.** Сповіщення про нові події (Telegram) — безкоштовні. Email-сповіщень на сайті НЕ показуємо (бекенд їх не надсилає): ні в тарифах, ні перемикача на /waitlist; колонка profiles.email_alerts у базі лишається, не чіпати.
   **«Задонатити» = донат на «Повернись живим»** (VITE_DONATE_URL), окремо від VIP. Не плутати в текстах.
   Тарифи (компонент `TariffTable`, табличка «Безкоштовно / VIP»):
-  - Безкоштовно: «Я чекаю на…» до 3 артистів; сповіщення в Telegram і на email, щойно з'явилася подія.
+  - Безкоштовно: «Я чекаю на…» до 3 артистів; «Сповіщення в Telegram, щойно з'явилася подія».
   - VIP 39 ₴/міс: необмежений список; нагадування за день до події; ліміт ціни для сповіщень (300 / 500 / 1000 ₴); бейдж VIP біля аватара.
   Модалка VIP — `useVip().openVip(reason?)` (`VipProvider` у Layout), завжди logClick('subscribe'):
   гість → /auth?mode=signup&next=<поточна>&vip=1, після входу модалка відкривається сама;

@@ -55,8 +55,8 @@ export function Hero() {
         </h1>
 
         <p className="mt-auto max-w-[34rem] pt-10 text-[15px] leading-relaxed text-white/85 sm:text-base">
-          Збираємо афіші з Concert.ua, Karabas, сайтів театрів і закладів. Підпишись на артиста — і дізнаєшся про його
-          концерт першим, поки квитки ще є.
+          Збираємо афіші з Concert.ua і Karabas в одному місці. Підпишись на артиста — і дізнаєшся про його концерт
+          першим, поки квитки ще є.
         </p>
 
         <form

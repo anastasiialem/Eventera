@@ -79,7 +79,7 @@ export default function StyleguidePage() {
           </div>
           <div>
             <p className="mb-1 text-xs uppercase tracking-widest text-plum-soft">font-sans · Onest 400 / 500 / 600</p>
-            <p>Збираємо афіші з Concert.ua, Karabas, сайтів театрів і закладів.</p>
+            <p>Збираємо афіші з Concert.ua і Karabas в одному місці.</p>
             <p className="font-medium">Підпишись на артиста — і дізнаєшся про його концерт першим.</p>
             <p className="font-semibold">Вхід вільний</p>
           </div>
