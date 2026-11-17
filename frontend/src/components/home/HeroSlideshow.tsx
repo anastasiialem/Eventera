@@ -141,7 +141,7 @@ export function HeroSlideshow() {
                 onClick={() => go(i)}
                 aria-label={`Фото ${i + 1} з ${count}`}
                 aria-current={i === current ? 'true' : undefined}
-                className="flex h-6 w-5 items-center justify-center rounded-full focus-visible:ring-offset-0"
+                className="flex h-6 w-3.5 items-center justify-center rounded-full focus-visible:ring-offset-0 sm:w-5"
               >
                 <span
                   className={cn(
