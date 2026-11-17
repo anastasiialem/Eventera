@@ -45,8 +45,8 @@ async def recipients(db: Supabase) -> list[int]:
 
 async def stats_text(db: Supabase) -> str:
     now = datetime.now(timezone.utc).isoformat()
-    users, linked, subs, events, upcoming, sent = await asyncio.gather(
-        db.count("profiles"), db.count("telegram_links"), db.count("subscriptions"),
+    users, vips, linked, subs, events, upcoming, sent = await asyncio.gather(
+        db.count("profiles"), db.count("profiles", {"vip_until": f"gt.{now}"}), db.count("telegram_links"), db.count("subscriptions"),
         db.count("events"), db.count("events", {"starts_at": f"gte.{now}"}),
         db.count("notifications_sent"),
     )
@@ -56,7 +56,7 @@ async def stats_text(db: Supabase) -> str:
     top_lines = "\n".join(f"  {i}. {html.escape(n)} — {c}" for i, (n, c) in enumerate(top, 1)) or "  поки нікого"
     return (
         "📊 <b>Eventera зараз</b>\n\n"
-        f"👤 Користувачів: <b>{users}</b>\n"
+        f"👤 Користувачів: <b>{users}</b>, з них 💜 VIP: <b>{vips}</b>\n"
         f"✈️ Підключили Telegram: <b>{linked}</b>\n"
         f"⭐ У списках «Я чекаю на…»: <b>{subs}</b> "
         f"(артисти {kinds.get('artist', 0)} · слова {kinds.get('keyword', 0)} · події {kinds.get('event', 0)})\n"

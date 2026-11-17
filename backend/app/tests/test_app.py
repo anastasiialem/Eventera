@@ -118,3 +118,16 @@ def test_notify_sends_records_and_unlinks_blocked():
     assert fake.tables["notifications_sent"] == [
         {"user_id": "u1", "event_id": 7, "channel": "telegram", "kind": "new_event"}]
     assert fake.tables["telegram_links"] == []
+
+
+def test_is_vip():
+    from app.waitlist import is_vip
+    now = datetime(2026, 11, 17, 12, tzinfo=timezone.utc)
+    assert not is_vip({"vip_until": None}, now)
+    assert not is_vip({}, now)
+    assert not is_vip({"vip_until": "2026-11-17T11:59:59+00:00"}, now)
+    assert is_vip({"vip_until": "2026-12-17T12:00:00.123456+00:00"}, now)
+
+
+def test_format_date():
+    assert notify.format_date("2026-12-16T23:30:00+00:00") == "17 грудня"

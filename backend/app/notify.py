@@ -32,6 +32,12 @@ def format_when(starts_at: str) -> str:
     return f"{_WEEKDAYS[dt.weekday()]}, {dt.day} {_MONTHS[dt.month - 1]}, {dt:%H:%M}"
 
 
+def format_date(value: str) -> str:
+    """'2026-12-17T10:00:00+00:00' -> '17 грудня'"""
+    dt = datetime.fromisoformat(value).astimezone(KYIV)
+    return f"{dt.day} {_MONTHS[dt.month - 1]}"
+
+
 def render(row: dict, kind: str) -> str:
     title = html.escape(row["title"])
     when = format_when(row["starts_at"])
