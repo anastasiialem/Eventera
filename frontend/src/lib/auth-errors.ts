@@ -7,6 +7,74 @@ interface AuthLikeError {
   message?: string
   name?: string
   status?: number
+  /** AuthWeakPasswordError (supabase-js): 'length' | 'characters' | 'pwned' */
+  reasons?: unknown
+  /** сира відповідь Auth API: { weak_password: { reasons: [...] } } */
+  weak_password?: { reasons?: unknown }
+}
+
+export const MIN_PASSWORD = 8
+
+/** Постійна підказка під полем пароля (вимоги, які знаємо заздалегідь). */
+export const PASSWORD_HINT = `Мінімум ${MIN_PASSWORD} символів`
+
+/** «Додай великі й малі літери та цифру» — з набору символів у повідомленні Supabase. */
+function charactersMessage(msg: string): string {
+  // «Password should contain at least one character of each: abc…xyz, ABC…XYZ, 0123456789, !@#…»
+  const sets = msg.split(/each:/i)[1]
+  if (!sets) return 'Додай великі й малі літери, цифру або символ.'
+  const lower = /[a-z]{3,}/.test(sets)
+  const upper = /[A-Z]{3,}/.test(sets)
+  const digit = /[0-9]{3,}/.test(sets)
+  const symbol = /[!@#$%^&*]/.test(sets)
+  const parts: string[] = []
+  if (lower && upper) parts.push('великі й малі літери')
+  else if (lower) parts.push('малі літери')
+  else if (upper) parts.push('великі літери')
+  if (digit) parts.push('цифру')
+  if (symbol) parts.push('символ (напр. ! або #)')
+  if (!parts.length) return 'Додай великі й малі літери, цифру або символ.'
+  const list = parts.length === 1 ? parts[0] : `${parts.slice(0, -1).join(', ')} і ${parts[parts.length - 1]}`
+  return `Додай ${list}.`
+}
+
+/**
+ * Помилка, що стосується самого пароля (weak_password, same_password) → текст під полем пароля.
+ * Для інших помилок — null.
+ */
+export function passwordErrorMessage(err: unknown): string | null {
+  const e = (err ?? {}) as AuthLikeError
+  const code = e.code ?? ''
+  const rawMsg = e.message ?? ''
+  const msg = rawMsg.toLowerCase()
+
+  if (code === 'same_password' || msg.includes('should be different from the old'))
+    return 'Новий пароль має відрізнятися від старого.'
+
+  const isWeak =
+    code === 'weak_password' ||
+    e.name === 'AuthWeakPasswordError' ||
+    msg.includes('password should') ||
+    msg.includes('known to be weak')
+  if (!isWeak) return null
+
+  const raw = Array.isArray(e.reasons) ? e.reasons : Array.isArray(e.weak_password?.reasons) ? e.weak_password.reasons : []
+  const reasons = new Set(raw.filter((r): r is string => typeof r === 'string'))
+  // reasons немає (старий клієнт / URL-помилка) — визначаємо з тексту
+  if (!reasons.size) {
+    if (/at least \d+ characters/.test(msg)) reasons.add('length')
+    if (msg.includes('character of each')) reasons.add('characters')
+    if (msg.includes('known to be weak') || msg.includes('pwned') || msg.includes('leaked')) reasons.add('pwned')
+  }
+
+  const out: string[] = []
+  if (reasons.has('length')) {
+    const n = Number(msg.match(/at least (\d+) characters/)?.[1]) || MIN_PASSWORD
+    out.push(`Мінімум ${n} символів.`)
+  }
+  if (reasons.has('characters')) out.push(charactersMessage(rawMsg))
+  if (reasons.has('pwned')) out.push('Цей пароль є в базах зламаних паролів — придумай інший.')
+  return out.length ? out.join(' ') : 'Пароль занадто простий — спробуй довший із цифрами.'
 }
 
 export function authErrorMessage(err: unknown): string {
@@ -37,10 +105,8 @@ export function authErrorMessage(err: unknown): string {
   if (code === 'email_not_confirmed' || msg.includes('email not confirmed'))
     return 'Спершу підтверди email — посилання в листі від нас.'
 
-  if (code === 'weak_password' || msg.includes('password should be'))
-    return 'Пароль надто простий. Потрібно щонайменше 8 символів.'
-
-  if (code === 'same_password') return 'Новий пароль має відрізнятися від старого.'
+  const passwordMsg = passwordErrorMessage(err)
+  if (passwordMsg) return passwordMsg
 
   if (code === 'email_address_invalid' || msg.includes('unable to validate email') || msg.includes('invalid format'))
     return 'Перевір, чи правильно введено email.'
@@ -72,8 +138,6 @@ export function safeNext(raw: string | null | undefined, fallback = '/waitlist')
   if (!raw || !raw.startsWith('/') || raw.startsWith('//') || raw.startsWith('/auth')) return fallback
   return raw
 }
-
-export const MIN_PASSWORD = 8
 
 export function isEmail(v: string): boolean {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v.trim())

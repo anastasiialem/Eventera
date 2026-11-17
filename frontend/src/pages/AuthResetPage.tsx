@@ -6,7 +6,7 @@ import { Button } from '../components/ui/Button'
 import { Card } from '../components/ui/Card'
 import { useToast } from '../components/ui/toast-context'
 import { useAuth } from '../lib/auth-context'
-import { authErrorMessage, MIN_PASSWORD, urlAuthError } from '../lib/auth-errors'
+import { authErrorMessage, MIN_PASSWORD, PASSWORD_HINT, passwordErrorMessage, urlAuthError } from '../lib/auth-errors'
 import { updatePassword } from '../lib/supabase'
 
 /** Сторінка з листа «Скинути пароль»: supabase-js створює тимчасову сесію з URL, тут задаємо новий пароль. */
@@ -37,7 +37,10 @@ export default function AuthResetPage() {
       toast('Пароль оновлено', { tone: 'success' })
       navigate('/waitlist', { replace: true })
     } catch (err) {
-      setError(authErrorMessage(err))
+      // weak_password / same_password — під полем «Новий пароль», решта — загальною помилкою
+      const passwordMsg = passwordErrorMessage(err)
+      if (passwordMsg) setFieldErrors((f) => ({ ...f, password: passwordMsg }))
+      else setError(authErrorMessage(err))
     } finally {
       setBusy(false)
     }
@@ -67,10 +70,11 @@ export default function AuthResetPage() {
               <PasswordField
                 label="Новий пароль"
                 autoComplete="new-password"
-                placeholder={`Мінімум ${MIN_PASSWORD} символів`}
+                placeholder="Придумай пароль"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 error={fieldErrors.password}
+                hint={PASSWORD_HINT}
                 disabled={busy}
                 autoFocus
               />

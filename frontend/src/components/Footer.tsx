@@ -12,7 +12,7 @@ export function Footer() {
         <div>
           <p className="font-display text-3xl text-white">eventera</p>
           <p className="mt-3 max-w-xs text-sm leading-relaxed">
-            Афіша Львова, яка сама слідкує за твоїми артистами. Зроблено студентками у Львові.
+            Афіша Львова, яка сама стежить за твоїми артистами. Зроблено студентками у Львові.
           </p>
         </div>
 
@@ -43,11 +43,6 @@ export function Footer() {
                   'Telegram-бот @Eventera_lviv_bot'
                 )}
               </button>
-            </li>
-            <li>
-              <a href="https://instagram.com/" target="_blank" rel="noopener noreferrer" className="text-white underline underline-offset-4 hover:text-lavender">
-                Instagram
-              </a>
             </li>
             <li>
               <Link to="/support" className="text-coral underline underline-offset-4 hover:brightness-110">

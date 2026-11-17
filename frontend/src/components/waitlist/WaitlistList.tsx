@@ -112,7 +112,7 @@ export function WaitlistList({ subscriptions, events, loading, onRemove }: Props
                       target="_blank"
                       rel="noopener noreferrer"
                       onClick={() => void logClick('ticket', event.id)}
-                      className="hidden h-10 shrink-0 items-center rounded-full bg-coral px-5 text-sm font-medium text-white transition hover:brightness-95 min-[420px]:inline-flex"
+                      className="hidden h-10 shrink-0 items-center rounded-full bg-coral px-5 text-sm font-medium text-plum-dark transition hover:brightness-95 min-[420px]:inline-flex"
                     >
                       Квитки
                     </a>

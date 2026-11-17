@@ -21,7 +21,7 @@ const swatches = [
   ['plum-soft', '#7A5C70', 'bg-plum-soft'],
   ['coral', '#E8806A', 'bg-coral'],
   ['coral-soft', '#FBE0DA', 'bg-coral-soft'],
-  ['coral-deep', '#C45442', 'bg-coral-deep'],
+  ['coral-deep', '#A8412F', 'bg-coral-deep'],
   ['lavender', '#C9B6E4', 'bg-lavender'],
   ['lavender-soft', '#ECE4F7', 'bg-lavender-soft'],
 ] as const
