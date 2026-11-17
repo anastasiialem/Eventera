@@ -62,7 +62,7 @@ function DonateSection() {
           <div className="space-y-3">
             {DONATE_URL ? (
               <Button href={DONATE_URL} variant="accent" size="lg" onClick={() => void logClick('donate')}>
-                <Heart size={18} className="fill-white/90" aria-hidden /> Відкрити банку <ExternalLink size={16} aria-hidden />
+                <Heart size={18} className="fill-white/90" aria-hidden /> Перейти на банку <ExternalLink size={16} aria-hidden />
               </Button>
             ) : (
               <p className="text-sm text-plum-dark/70">Посилання на банку скоро з’явиться.</p>
