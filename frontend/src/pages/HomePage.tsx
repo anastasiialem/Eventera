@@ -7,6 +7,7 @@ import { HomeTiles } from '../components/home/HomeTiles'
 import { AFISHA_ID, useHomeFilters } from '../components/home/use-home-filters'
 import { WaitedBanner } from '../components/home/WaitedBanner'
 import { WeekStats } from '../components/home/WeekStats'
+import { SupportActions } from '../components/SupportActions'
 import { Button } from '../components/ui/Button'
 import { Card } from '../components/ui/Card'
 import { EventCardSkeleton } from '../components/ui/Skeleton'
@@ -60,7 +61,7 @@ export default function HomePage() {
           <div className="flex flex-col gap-4 sm:gap-5 lg:pt-1.5">
             <WeekStats />
             <HomeTiles />
-            {/* Промпт 9: тут з’явиться <SupportActions /> («Підписатися» + «Задонатити») */}
+            <SupportActions />
           </div>
         </div>
       </div>

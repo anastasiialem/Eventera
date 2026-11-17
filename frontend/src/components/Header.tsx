@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from 'react'
 import { Link, NavLink, useNavigate } from 'react-router-dom'
 import { cn } from '../lib/cn'
 import { useAuth } from '../lib/auth-context'
+import { useVip } from '../lib/vip-context'
 import { Button } from './ui/Button'
 import { Logo } from './ui/Logo'
 
@@ -17,8 +18,18 @@ function initial(name: string) {
   return (name.trim()[0] ?? '•').toUpperCase()
 }
 
+/** Бейдж VIP на аватарі (profiles.vip_until > now()). */
+function VipMark() {
+  return (
+    <span className="absolute -bottom-1 -right-2 rounded-full bg-plum-dark px-1.5 py-px font-sans text-[10px] font-semibold leading-tight tracking-wide text-white ring-2 ring-powder">
+      VIP
+    </span>
+  )
+}
+
 /** Аватар з першою літерою імені + меню «Мій список» / «Вийти». */
 function AccountMenu({ name, onSignOut }: { name: string; onSignOut: () => void }) {
+  const { isVip } = useVip()
   const [open, setOpen] = useState(false)
   const ref = useRef<HTMLDivElement>(null)
   const reduce = useReducedMotion()
@@ -45,9 +56,10 @@ function AccountMenu({ name, onSignOut }: { name: string; onSignOut: () => void 
         aria-haspopup="menu"
         aria-expanded={open}
         aria-label={`Мій акаунт: ${name}`}
-        className="flex h-11 w-11 items-center justify-center rounded-full bg-lavender font-display text-lg text-plum-dark shadow-soft transition hover:brightness-105"
+        className="relative flex h-11 w-11 items-center justify-center rounded-full bg-lavender font-display text-lg text-plum-dark shadow-soft transition hover:brightness-105"
       >
         {initial(name)}
+        {isVip && <VipMark />}
       </button>
       <AnimatePresence>
         {open && (
@@ -88,6 +100,7 @@ function AccountMenu({ name, onSignOut }: { name: string; onSignOut: () => void 
 
 export function Header() {
   const { user, loading, displayName: name, signOut } = useAuth()
+  const { isVip } = useVip()
   const navigate = useNavigate()
   const [open, setOpen] = useState(false)
   const reduce = useReducedMotion()
@@ -183,8 +196,9 @@ export function Header() {
                 {user ? (
                   <div className="flex w-full flex-col gap-1">
                     <div className="flex items-center gap-3 px-3 py-1 text-plum">
-                      <span className="flex h-9 w-9 items-center justify-center rounded-full bg-lavender font-display text-plum-dark">
+                      <span className="relative flex h-9 w-9 items-center justify-center rounded-full bg-lavender font-display text-plum-dark">
                         {initial(name)}
+                        {isVip && <VipMark />}
                       </span>
                       <span className="truncate">{name}</span>
                     </div>

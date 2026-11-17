@@ -1,6 +1,7 @@
 import { Loader2 } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import { useTelegramLink } from '../lib/use-telegram-link'
+import { SupportActions } from './SupportActions'
 
 export function Footer() {
   const telegram = useTelegramLink()
@@ -55,6 +56,7 @@ export function Footer() {
               </Link>
             </li>
           </ul>
+          <SupportActions tone="dark" className="mt-5 max-w-xs" />
         </div>
       </div>
     </footer>

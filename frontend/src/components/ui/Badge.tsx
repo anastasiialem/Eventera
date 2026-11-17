@@ -1,7 +1,7 @@
 import type { ReactNode } from 'react'
 import { cn } from '../../lib/cn'
 
-export type BadgeTone = 'few' | 'new' | 'category' | 'success' | 'neutral'
+export type BadgeTone = 'few' | 'new' | 'category' | 'success' | 'neutral' | 'vip'
 
 const tones: Record<BadgeTone, string> = {
   few: 'bg-coral-soft text-coral-deep', // «Мало квитків»
@@ -9,6 +9,7 @@ const tones: Record<BadgeTone, string> = {
   category: 'bg-black/40 text-white backdrop-blur-sm', // «Концерт» поверх фото
   success: 'bg-white text-success', // «Підключено»
   neutral: 'bg-plum/5 text-plum-soft',
+  vip: 'bg-plum-dark text-white tracking-wide', // «VIP»
 }
 
 export function Badge({

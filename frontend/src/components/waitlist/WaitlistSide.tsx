@@ -2,12 +2,14 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Check, Loader2, LogOut, Send } from 'lucide-react'
 import type { ReactNode } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { getNotificationPrefs, logClick, TELEGRAM_BOT_URL, updateNotificationPrefs } from '../../lib/api'
+import { getNotificationPrefs, TELEGRAM_BOT_URL, updateNotificationPrefs } from '../../lib/api'
 import { useAuth } from '../../lib/auth-context'
-import { DONATE_URL } from '../../lib/donate'
 import { useTelegramLink } from '../../lib/use-telegram-link'
 import { useTelegramStatus } from '../../lib/use-telegram-status'
+import { VIP_PRICE_LIMITS } from '../../lib/vip'
+import { useVip } from '../../lib/vip-context'
 import type { NotificationPrefs } from '../../types'
+import { SupportActions } from '../SupportActions'
 import { Badge } from '../ui/Badge'
 import { Button } from '../ui/Button'
 import { DashedRings } from '../ui/DashedRings'
@@ -69,6 +71,7 @@ export function TelegramCard() {
           </Button>
         </div>
       )}
+      <SupportActions className="mt-4" />
     </GelTile>
   )
 }
@@ -98,11 +101,24 @@ function PrefRow({
   )
 }
 
+/** Неактивна галочка для безкоштовного тарифу: підпис «VIP», клік відкриває модалку VIP. */
+function VipLockedRow({ onClick, children }: { onClick: () => void; children: ReactNode }) {
+  return (
+    <button type="button" onClick={onClick} className="flex w-full items-start gap-3 py-2 text-left text-sm text-plum">
+      <span aria-hidden className="mt-px h-5 w-5 shrink-0 rounded border-2 border-plum/25 bg-plum/5" />
+      <span className="flex-1 opacity-60">{children}</span>
+      <Badge tone="vip">VIP</Badge>
+      <span className="sr-only">— доступно у VIP, відкрити тарифи</span>
+    </button>
+  )
+}
+
 const MAX_PRICE_DEFAULT = 500
 
 /** «Як повідомляти» → profiles.email_alerts / telegram_alerts (+ remind_day_before / max_price, якщо є колонки). */
 export function NotifyPrefsCard() {
   const { user, refreshProfile } = useAuth()
+  const { isVip, openVip } = useVip()
   const queryClient = useQueryClient()
   const toast = useToast()
   const key = ['notification-prefs', user?.id]
@@ -154,18 +170,44 @@ export function NotifyPrefsCard() {
           <PrefRow checked={prefs.email_alerts} onChange={(v) => set({ email_alerts: v })}>
             <b className="font-semibold text-ink">Email</b> — на {user?.email ?? 'твою пошту'}
           </PrefRow>
-          {data.extended && (
+          {isVip && data.extended ? (
             <>
               <PrefRow checked={Boolean(prefs.remind_day_before)} onChange={(v) => set({ remind_day_before: v })}>
                 Нагадати за день до події
               </PrefRow>
-              <PrefRow
-                checked={prefs.max_price != null}
-                onChange={(v) => set({ max_price: v ? MAX_PRICE_DEFAULT : null })}
-              >
-                Тільки події до {prefs.max_price ?? MAX_PRICE_DEFAULT} ₴
-              </PrefRow>
+              <div className="flex items-center gap-3">
+                <PrefRow
+                  checked={prefs.max_price != null}
+                  onChange={(v) => set({ max_price: v ? MAX_PRICE_DEFAULT : null })}
+                >
+                  Ліміт ціни
+                </PrefRow>
+                <select
+                  aria-label="Ліміт ціни для сповіщень"
+                  value={prefs.max_price ?? MAX_PRICE_DEFAULT}
+                  disabled={prefs.max_price == null}
+                  onChange={(e) => set({ max_price: Number(e.target.value) })}
+                  className="h-9 rounded-full border border-line/15 bg-white px-3 text-sm text-plum disabled:opacity-50"
+                >
+                  {VIP_PRICE_LIMITS.map((p) => (
+                    <option key={p} value={p}>
+                      до {p} ₴
+                    </option>
+                  ))}
+                </select>
+              </div>
             </>
+          ) : (
+            !isVip && (
+              <>
+                <VipLockedRow onClick={() => openVip('Нагадування за день і ліміт ціни — у VIP')}>
+                  Нагадати за день до події
+                </VipLockedRow>
+                <VipLockedRow onClick={() => openVip('Нагадування за день і ліміт ціни — у VIP')}>
+                  Ліміт ціни ({VIP_PRICE_LIMITS.join(' / ')} ₴)
+                </VipLockedRow>
+              </>
+            )
           )}
         </div>
       )}
@@ -191,20 +233,14 @@ export function AccountCard() {
         Акаунт
       </h2>
       <p className="mt-1 truncate text-sm text-plum">{user?.email}</p>
-      <div className="mt-4 flex flex-wrap gap-2">
-        <Button variant="outline" size="sm" onClick={() => void onSignOut()}>
-          <LogOut size={15} aria-hidden /> Вийти
-        </Button>
-        {DONATE_URL ? (
-          <Button href={DONATE_URL} variant="soft" size="sm" onClick={() => void logClick('donate')}>
-            Підтримати збір
-          </Button>
-        ) : (
-          <Button to="/support" variant="soft" size="sm">
-            Підтримати збір
-          </Button>
-        )}
-      </div>
+      <Button variant="outline" size="sm" className="mt-4" onClick={() => void onSignOut()}>
+        <LogOut size={15} aria-hidden /> Вийти
+      </Button>
+      <h3 className="mt-6 font-display text-lg">Підтримати збір</h3>
+      <p className="mt-1 text-xs text-plum-soft">
+        VIP — на розвиток Eventera, «Задонатити» — на «Повернись живим».
+      </p>
+      <SupportActions className="mt-3" />
     </section>
   )
 }

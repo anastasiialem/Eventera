@@ -30,6 +30,7 @@ Vite + React + TypeScript, Tailwind CSS, react-router-dom, @tanstack/react-query
 
 Змінні середовища (frontend/.env.local):
 VITE_SUPABASE_URL, VITE_SUPABASE_ANON_KEY, VITE_API_URL (поки порожня), VITE_BACKEND_URL, VITE_DONATE_URL,
+VITE_VIP_PAY_URL (банка «Eventera VIP»), VITE_VIP_NOTE (куди йдуть кошти VIP; порожньо → дефолтний текст),
 VITE_TELEGRAM_BOT_URL (https://t.me/Eventera_lviv_bot), VITE_ENABLE_GOOGLE
 
 ## Маршрути
@@ -39,7 +40,7 @@ VITE_TELEGRAM_BOT_URL (https://t.me/Eventera_lviv_bot), VITE_ENABLE_GOOGLE
 - `/event/:id` — сторінка події
 - `/waitlist` — «Я чекаю на…» (тільки для залогінених)
 - `/auth` (`?mode=signup`), `/auth/callback`, `/auth/reset`
-- `/support` — підтримати збір
+- `/support` — два блоки: «Донат на «Повернись живим»» (банка, QR qrcode.react, лічильник donate_clicks_count()) і «VIP-підписка» (тарифи + SupportActions). Пункт навігації «Підтримати».
 ## Дані (Supabase)
 Основна схема — міграції Ролі 3 у `supabase/migrations/` (не змінювати; фронт підлаштовується під неї).
 Моя частина — `infra/supabase/schema.sql` (feedback, clicks, RPC), накатується після міграцій.
@@ -54,7 +55,8 @@ artists jsonb [{id, name, slug}], genres jsonb [{slug, name}], sources jsonb [{s
 Базові таблиці: events, venues, artists (name, slug, aliases[]), genres (slug — для фільтра), event_artists, event_genres,
 event_sources, sources. Пише в них тільки service_role (парсер / бекенд).
 
-profiles: id (= auth.users.id), display_name, email_alerts, telegram_alerts, created_at, updated_at.
+profiles: id (= auth.users.id), display_name, email_alerts, telegram_alerts, created_at, updated_at
+(+ vip_until timestamptz — додає Роль 3; поки колонки немає, усі безкоштовні — AuthProvider читає select('*')).
 Створюється тригером handle_new_user(): ім'я береться з raw_user_meta_data.display_name →
 у `supabase.auth.signUp` передавати `options.data.display_name`.
 subscriptions («Я чекаю на…»): id, user_id, kind (artist|event|keyword), artist_id | event_id | keyword (рівно одне), created_at.
@@ -63,8 +65,11 @@ telegram_links: user_id, chat_id, username · telegram_link_tokens: token, user_
 notifications_sent, notification_queue — тільки бекенд.
 
 feedback: id, user_id (nullable), rating (1–5), liked, disliked, would_pay (yes|maybe|no), page, created_at
-clicks: id, user_id (nullable), kind (donate|subscribe|ticket|telegram), event_id (nullable → events.id), created_at
+clicks: id, user_id (nullable), kind (donate|subscribe|ticket|telegram|vip_pay), event_id (nullable → events.id), created_at
+(subscribe — кнопка VIP «Підписатися»; vip_pay — «Оплатити 39 ₴»; дзвіночок «Я чекаю на…» кліків не пише)
+vip_requests: id, user_id → auth.users, email, created_at, status (pending|approved|rejected, default pending).
 RLS: feedback і clicks — insert для всіх (user_id null або свій), select нікому з anon/authenticated.
+vip_requests — insert (лише свій, status=pending) і select лише своїх рядків. Підтвердження VIP — вручну, infra/README.md.
 RPC `donate_clicks_count()` — кількість кліків «Задонатити» (для /support).
 
 ## API Ролі 3 (якщо VITE_API_URL задано)
@@ -127,6 +132,23 @@ POST ${VITE_BACKEND_URL}/api/telegram/link (Authorization: Bearer <access_token>
 - Фото в hero змінюється (crossfade кожні ~6 с) з `frontend/public/images/hero/`.
 - Фото події: `image_url`, якщо є і завантажилось; інакше фото за категорією
   `/images/categories/{category}-{1..3}.jpg`, номер — детермінований хеш від id.
-- Кнопки «Підписатися» (підписка на сповіщення) і «Задонатити» завжди поруч (компонент SupportActions).
-- Плаваюча кнопка «Відгук» пише в `feedback`; кліки донату/підписки/квитків — у `clicks`.
+- **SupportActions** (`src/components/SupportActions.tsx`): «Підписатися» (сливова, підпис «VIP · 39 ₴/міс»;
+  для VIP — «VIP до {дата}») і «Задонатити» (коралова, з серцем) — завжди поруч.
+  **ПРАВИЛО: скрізь, де є «Задонатити» АБО кнопка/плитка Telegram, поруч має бути «Підписатися» (тобто SupportActions).**
+  Зараз: головна (під плитками), сторінка події (блок донату і блок Telegram), /waitlist (картка Telegram і
+  «Підтримати збір» в «Акаунті»), футер (tone="dark"), /support.
+- **«Підписатися» = платна VIP-підписка 39 ₴/міс.** Сповіщення про нові події (Telegram/email) — безкоштовні.
+  **«Задонатити» = донат на «Повернись живим»** (VITE_DONATE_URL), окремо від VIP. Не плутати в текстах.
+  Тарифи (компонент `TariffTable`, табличка «Безкоштовно / VIP»):
+  - Безкоштовно: «Я чекаю на…» до 3 артистів; сповіщення в Telegram і на email, щойно з'явилася подія.
+  - VIP 39 ₴/міс: необмежений список; нагадування за день до події; ліміт ціни для сповіщень (300 / 500 / 1000 ₴); бейдж VIP біля аватара.
+  Модалка VIP — `useVip().openVip(reason?)` (`VipProvider` у Layout), завжди logClick('subscribe'):
+  гість → /auth?mode=signup&next=<поточна>&vip=1, після входу модалка відкривається сама;
+  крок 1 «Оплатити 39 ₴» → VITE_VIP_PAY_URL + logClick('vip_pay') + email для коментаря з «Скопіювати»;
+  крок 2 «Я оплатив(-ла)» → insert у vip_requests → «Перевіряємо оплату — до 24 годин».
+  VIP активний, якщо profiles.vip_until > now(). Ліміт 3 — у `useSubscriptionActions().add`;
+  на /waitlist «Нагадати за день» і «Ліміт ціни» для не-VIP неактивні з бейджем «VIP» і відкривають модалку.
+- Плаваюча кнопка «Відгук» (`FeedbackButton`): оцінка 1–5, що сподобалось, що заважало, чи оформив(-ла) би VIP
+  (yes|maybe|no) → `feedback` зі сторінкою. Новим акаунтам через 2 хв після реєстрації — один раз підказка.
+  Кліки донату/VIP/квитків/Telegram — у `clicks`.
  

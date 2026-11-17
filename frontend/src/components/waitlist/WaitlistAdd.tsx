@@ -2,6 +2,8 @@ import { Check, Plus } from 'lucide-react'
 import { useId, useMemo, useState, type FormEvent, type KeyboardEvent } from 'react'
 import { cn } from '../../lib/cn'
 import { findSubscription, lower } from '../../lib/use-subscription-actions'
+import { FREE_LIMIT } from '../../lib/vip'
+import { useVip } from '../../lib/vip-context'
 import type { Subscription } from '../../types'
 
 const POPULAR = ['МУР', 'ТНМК', 'Latexfauna', 'sadsvit', 'Океан Ельзи', 'Антитіла']
@@ -20,6 +22,7 @@ interface Props {
 
 /** Інпут «Артист, гурт або театр…» з автопідказками + чипи популярних. */
 export function WaitlistAdd({ artists, subscriptions, onAdd }: Props) {
+  const { isVip, openVip } = useVip()
   const [value, setValue] = useState('')
   const [open, setOpen] = useState(false)
   const [active, setActive] = useState(-1)
@@ -130,6 +133,18 @@ export function WaitlistAdd({ artists, subscriptions, onAdd }: Props) {
           <Plus size={18} aria-hidden /> Додати
         </button>
       </form>
+
+      {!isVip && (
+        <p className="mt-3 px-1 text-xs text-plum-soft">
+          <span className="font-medium text-plum">
+            {Math.min(subscriptions.length, FREE_LIMIT)} / {FREE_LIMIT}
+          </span>{' '}
+          у безкоштовному тарифі ·{' '}
+          <button type="button" onClick={() => openVip()} className="font-medium text-plum underline underline-offset-2">
+            VIP — без обмежень
+          </button>
+        </p>
+      )}
 
       <p className="mb-2.5 mt-4 text-xs text-plum-soft">Найчастіше чекають студенти Львова:</p>
       <div className="flex flex-wrap gap-2">

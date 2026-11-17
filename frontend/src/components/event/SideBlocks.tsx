@@ -1,82 +1,48 @@
-import { Check, Heart, Loader2, Plus, Send } from 'lucide-react'
-import { logClick } from '../../lib/api'
-import { cn } from '../../lib/cn'
-import { DONATE_URL } from '../../lib/donate'
+import { Check, Heart, Loader2, Send } from 'lucide-react'
 import { useTelegramLink } from '../../lib/use-telegram-link'
 import { useTelegramStatus } from '../../lib/use-telegram-status'
-import { Button } from '../ui/Button'
+import { SupportActions } from '../SupportActions'
 import { DashedRings } from '../ui/DashedRings'
 import { GelTile } from '../ui/GelTile'
 import { GradientHeart, VibratingIcon } from '../ui/VibratingIcon'
 
-/** Кнопка «Задонатити»: банка monobank (VITE_DONATE_URL), без неї — /support. */
-export function DonateButton({ className, children = 'Задонатити' }: { className?: string; children?: string }) {
-  if (!DONATE_URL)
-    return (
-      <Button to="/support" variant="outline" className={cn('bg-white', className)}>
-        {children} <Plus size={16} aria-hidden />
-      </Button>
-    )
-  return (
-    <Button
-      href={DONATE_URL}
-      variant="outline"
-      className={cn('border-transparent bg-white hover:bg-white', className)}
-      onClick={() => void logClick('donate')}
-    >
-      {children} <Plus size={16} aria-hidden />
-    </Button>
-  )
-}
-
-/** Telegram-нагадування на сторінці події. Кнопка — через linkTelegram(). */
+/** Telegram-нагадування на сторінці події. Кнопка — через linkTelegram(); поруч — SupportActions. */
 export function TelegramReminder() {
   const telegram = useTelegramLink()
   const { linked } = useTelegramStatus()
 
-  const icon = (
-    <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-[linear-gradient(145deg,#7A5A8E,#5A3A6E)] text-white shadow-soft">
-      {telegram.pending ? (
-        <Loader2 size={20} className="animate-spin motion-reduce:animate-none" aria-hidden />
-      ) : linked ? (
-        <Check size={20} aria-hidden />
-      ) : (
-        <Send size={20} className="-translate-x-px translate-y-px" aria-hidden />
-      )}
-    </span>
-  )
-
-  if (linked)
-    return (
-      <GelTile variant="telegram" className="flex items-center gap-4 rounded-[28px] p-5">
-        {icon}
-        <p className="text-sm leading-relaxed">
-          Telegram підключено — напишемо, щойно в артистів із твого списку з&apos;явиться подія у Львові.
-        </p>
-      </GelTile>
-    )
-
   return (
-    <GelTile variant="telegram" interactive className="rounded-[28px]">
-      <button
-        type="button"
-        onClick={telegram.start}
-        disabled={telegram.pending}
-        aria-busy={telegram.pending}
-        className="flex w-full items-center gap-4 rounded-[28px] p-5 text-left disabled:cursor-progress"
-      >
-        {icon}
-        <span className="text-sm leading-relaxed">
+    <GelTile variant="telegram" className="space-y-4 rounded-[28px] p-5">
+      <div className="flex items-center gap-4">
+        <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-[linear-gradient(145deg,#7A5A8E,#5A3A6E)] text-white shadow-soft">
           {telegram.pending ? (
-            'Прокидаємо бота…'
+            <Loader2 size={20} className="animate-spin motion-reduce:animate-none" aria-hidden />
+          ) : linked ? (
+            <Check size={20} aria-hidden />
           ) : (
-            <>
-              Нагадаємо в Telegram, щойно з&apos;явиться нова подія твоїх артистів.{' '}
-              <span className="font-medium underline underline-offset-2">Підключити</span>
-            </>
+            <Send size={20} className="-translate-x-px translate-y-px" aria-hidden />
           )}
         </span>
-      </button>
+        <div className="min-w-0 text-sm leading-relaxed text-plum-dark">
+          {linked ? (
+            <p>Telegram підключено — напишемо, щойно в артистів із твого списку з&apos;явиться подія у Львові.</p>
+          ) : (
+            <>
+              <p>Нагадаємо в Telegram, щойно з&apos;явиться нова подія твоїх артистів. Це безкоштовно.</p>
+              <button
+                type="button"
+                onClick={telegram.start}
+                disabled={telegram.pending}
+                aria-busy={telegram.pending}
+                className="mt-1 font-medium underline underline-offset-2 disabled:cursor-progress disabled:no-underline"
+              >
+                {telegram.pending ? 'Прокидаємо бота…' : 'Підключити'}
+              </button>
+            </>
+          )}
+        </div>
+      </div>
+      <SupportActions />
     </GelTile>
   )
 }
@@ -93,7 +59,7 @@ export function DonateBlock() {
         </span>
       }
     >
-      <span aria-hidden className="pointer-events-none absolute right-[13%] top-1/2 -translate-y-1/2">
+      <span aria-hidden className="pointer-events-none absolute right-[13%] top-[38%] -translate-y-1/2">
         <VibratingIcon pulse className="relative items-center justify-center">
           <Heart strokeWidth={1} strokeDasharray="2.2 1.6" className="absolute h-[100px] w-[100px] text-white/50" />
           <GradientHeart className="h-14 w-14 drop-shadow-[0_6px_14px_rgba(196,84,66,.35)]" />
@@ -103,7 +69,7 @@ export function DonateBlock() {
       <p className="relative mt-3 max-w-[18ch] text-sm leading-relaxed text-plum-dark/80">
         Навіть кілька гривень допоможе «Повернись живим»!
       </p>
-      <DonateButton className="mt-5 shadow-soft" />
+      <SupportActions className="relative mt-5" />
     </GelTile>
   )
 }
