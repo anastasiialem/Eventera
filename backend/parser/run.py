@@ -64,6 +64,8 @@ def save_to_db(events) -> None:
             log(f"  ! not saved: '{ev.title}' ({ev.source}): {e}")
     log(f"Database: {stats['created']} new, {stats['linked']} merged with another site, "
         f"{stats['updated']} updated, {stats['error']} errors")
+    if events and stats["error"] == len(events):
+        sys.exit("Every event failed to save: check the Supabase keys and the schema")
 
 
 def main() -> None:
@@ -74,6 +76,9 @@ def main() -> None:
 
     events = collect()
     print_table(events)
+    if not events:
+        # all sources failed or returned nothing: fail loudly so a scheduled run shows up red
+        sys.exit("No events collected from any source")
 
     if args.json:
         with open(args.json, "w", encoding="utf-8") as f:
