@@ -82,8 +82,12 @@ export interface Event {
 
 export type Period = 'week' | 'month' | 'season' | 'year'
 
+/** Швидкі фільтри з hero: «Сьогодні», «Ці вихідні» (за часом Києва). Мають пріоритет над period. */
+export type When = 'today' | 'weekend'
+
 export interface EventFilters {
   period?: Period
+  when?: When
   category?: EventCategory
   price_max?: number
   free?: boolean

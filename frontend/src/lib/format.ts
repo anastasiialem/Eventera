@@ -38,3 +38,22 @@ export function formatPrice(e: Pick<Event, 'price_min' | 'is_free'>) {
   if (e.price_min === null) return 'Ціну уточнюємо'
   return `від ${num(e.price_min)} ₴`
 }
+
+/** «щойно», «12 хв тому», «3 год тому», «2 дн тому» */
+export function formatAgo(iso: string | number, now = Date.now()) {
+  const min = Math.max(0, Math.floor((now - new Date(iso).getTime()) / 60000))
+  if (min < 1) return 'щойно'
+  if (min < 60) return `${min} хв тому`
+  const h = Math.floor(min / 60)
+  if (h < 24) return `${h} год тому`
+  return `${Math.floor(h / 24)} дн тому`
+}
+
+/** «1 подія», «3 події», «6 подій» */
+export function eventsWord(n: number) {
+  const mod10 = n % 10
+  const mod100 = n % 100
+  if (mod10 === 1 && mod100 !== 11) return 'подія'
+  if (mod10 >= 2 && mod10 <= 4 && (mod100 < 12 || mod100 > 14)) return 'події'
+  return 'подій'
+}
