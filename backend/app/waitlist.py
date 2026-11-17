@@ -28,6 +28,11 @@ def clean_query(text: str) -> str:
     return " ".join(text.split())[:100]
 
 
+def normalize(text: str) -> str:
+    """Як public.normalize_text: без регістру, лапок і розділових знаків."""
+    return " ".join(re.sub(r"[\W_]+", " ", text.lower()).split())
+
+
 async def find_artists(db: Supabase, query: str, limit: int = 5) -> list[dict]:
     """Артисти, у чиєму імені є query, або з точно таким іншим написанням (aliases)."""
     q = clean_query(query)
@@ -66,6 +71,10 @@ async def add_artist(db: Supabase, user_id: str, artist_id: int) -> Added:
 
 async def add_keyword(db: Supabase, user_id: str, keyword: str) -> Added:
     keyword = clean_query(keyword)
+    # «Крик кохання» і «крик Кохання» — те саме слово, другий раз не додаємо
+    existing = await db.select("subscriptions", {"user_id": f"eq.{user_id}", "kind": "eq.keyword", "select": "keyword"})
+    if any(normalize(r["keyword"] or "") == normalize(keyword) for r in existing):
+        return Added(False, keyword)
     ok = await _insert_subscription(db, {"user_id": user_id, "kind": "keyword", "keyword": keyword})
     return Added(ok, keyword)
 
@@ -75,6 +84,15 @@ async def add_event(db: Supabase, user_id: str, event_id: int) -> Added:
     title = rows[0]["title"] if rows else "подія"
     ok = await _insert_subscription(db, {"user_id": user_id, "kind": "event", "event_id": event_id})
     return Added(ok, title)
+
+
+async def upcoming_matches(db: Supabase, *, artist_id: int | None = None,
+                           keyword: str | None = None, limit: int = 5) -> list[dict]:
+    """Майбутні події, що вже є в афіші (RPC upcoming_matches). Помилка — порожній список."""
+    try:
+        return await db.rpc("upcoming_matches", {"p_artist_id": artist_id, "p_keyword": keyword, "p_limit": limit})
+    except httpx.HTTPError:
+        return []
 
 
 async def list_subscriptions(db: Supabase, user_id: str) -> list[dict]:

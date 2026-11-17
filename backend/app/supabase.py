@@ -48,6 +48,11 @@ class Supabase:
         r.raise_for_status()
         return int(r.headers.get("content-range", "*/0").rsplit("/", 1)[-1])
 
+    async def rpc(self, fn: str, args: dict) -> Any:
+        r = await self.http.post(f"/rest/v1/rpc/{fn}", json=args)
+        r.raise_for_status()
+        return r.json()
+
     async def update(self, table: str, params: dict[str, str], values: dict) -> None:
         r = await self.http.patch(f"/rest/v1/{table}", params=params, json=values,
                                   headers={"Prefer": "return=minimal"})
