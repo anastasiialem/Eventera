@@ -115,7 +115,7 @@ function VipLockedRow({ onClick, children }: { onClick: () => void; children: Re
 
 const MAX_PRICE_DEFAULT = 500
 
-/** «Як повідомляти» → profiles.email_alerts / telegram_alerts (+ remind_day_before / max_price, якщо є колонки). */
+/** «Як повідомляти» → profiles.telegram_alerts (+ remind_day_before / max_price, якщо є колонки). email_alerts у базі є, але на сайті не показуємо. */
 export function NotifyPrefsCard() {
   const { user, refreshProfile } = useAuth()
   const { isVip, openVip } = useVip()
@@ -167,9 +167,6 @@ export function NotifyPrefsCard() {
         <div>
           <PrefRow checked={prefs.telegram_alerts} onChange={(v) => set({ telegram_alerts: v })}>
             <b className="font-semibold text-ink">Telegram</b> — одразу після анонсу
-          </PrefRow>
-          <PrefRow checked={prefs.email_alerts} onChange={(v) => set({ email_alerts: v })}>
-            <b className="font-semibold text-ink">Email</b> — на {user?.email ?? 'твою пошту'}
           </PrefRow>
           {isVip && data.extended ? (
             <>

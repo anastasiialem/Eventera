@@ -7,7 +7,7 @@ type Cell = boolean | string
 
 const rows: { label: string; free: Cell; vip: Cell }[] = [
   { label: '«Я чекаю на…»', free: `до ${FREE_LIMIT} артистів`, vip: 'без обмежень' },
-  { label: 'Сповіщення в Telegram і на email, щойно з’явилася подія', free: true, vip: true },
+  { label: 'Сповіщення в Telegram, щойно з’явилася подія', free: true, vip: true },
   { label: 'Нагадування за день до події', free: false, vip: true },
   { label: `Ліміт ціни для сповіщень (${VIP_PRICE_LIMITS.join(' / ')} ₴)`, free: false, vip: true },
   { label: 'Бейдж VIP біля аватара', free: false, vip: true },
