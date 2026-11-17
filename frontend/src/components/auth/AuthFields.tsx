@@ -10,7 +10,7 @@ const inputCls =
 interface FieldProps extends Omit<InputHTMLAttributes<HTMLInputElement>, 'className'> {
   label: string
   error?: string
-  /** Елемент праворуч від підпису (напр. «Забули пароль?») */
+  /** Елемент праворуч від підпису (напр. «Не пам’ятаєш пароль?») */
   aside?: ReactNode
 }
 

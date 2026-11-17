@@ -3,9 +3,24 @@ import { createClient, type SupabaseClient } from '@supabase/supabase-js'
 const url = import.meta.env.VITE_SUPABASE_URL
 const anonKey = import.meta.env.VITE_SUPABASE_ANON_KEY
 
+/** Запит до Supabase, що висить довше, обриваємо — тоді api.ts перейде на моки, а не крутитиме скелетони вічно. */
+const SUPABASE_TIMEOUT_MS = 15_000
+
+const fetchWithTimeout: typeof fetch = (input, init) => {
+  const timeout = AbortSignal.timeout(SUPABASE_TIMEOUT_MS)
+  const signal =
+    init?.signal && 'any' in AbortSignal ? AbortSignal.any([init.signal, timeout]) : (init?.signal ?? timeout)
+  return fetch(input, { ...init, signal })
+}
+
 /** null, якщо Supabase не налаштовано — тоді сайт працює на моках. */
 export const supabase: SupabaseClient | null =
-  url && anonKey ? createClient(url, anonKey, { auth: { persistSession: true, autoRefreshToken: true } }) : null
+  url && anonKey
+    ? createClient(url, anonKey, {
+        auth: { persistSession: true, autoRefreshToken: true },
+        global: { fetch: fetchWithTimeout },
+      })
+    : null
 
 export const isSupabaseConfigured = supabase !== null
 

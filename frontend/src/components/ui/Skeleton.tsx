@@ -25,3 +25,17 @@ export function EventCardSkeleton() {
     </div>
   )
 }
+
+/** Поки вантажиться код сторінки (lazy-маршрут): заголовок + кілька блоків, без порожнього екрана. */
+export function PageSkeleton() {
+  return (
+    <div className="mx-auto w-full max-w-page space-y-5 px-4 py-6" aria-busy="true" aria-label="Завантаження сторінки">
+      <Skeleton className="h-10 w-2/3 max-w-md" />
+      <Skeleton className="h-4 w-1/2 max-w-sm" />
+      <div className="grid gap-5 pt-2 sm:grid-cols-2">
+        <Skeleton className="h-56 rounded-card" />
+        <Skeleton className="h-56 rounded-card" />
+      </div>
+    </div>
+  )
+}

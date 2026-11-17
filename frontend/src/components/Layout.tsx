@@ -1,4 +1,6 @@
+import { Suspense } from 'react'
 import { Outlet } from 'react-router-dom'
+import { PageSkeleton } from './ui/Skeleton'
 import { FeedbackButton } from './FeedbackButton'
 import { Footer } from './Footer'
 import { Header } from './Header'
@@ -10,7 +12,9 @@ export function Layout() {
       <div className="flex min-h-screen flex-col">
         <Header />
         <main className="mx-auto w-full max-w-page flex-1 px-4 pb-16 pt-6 sm:px-6">
-          <Outlet />
+          <Suspense fallback={<PageSkeleton />}>
+            <Outlet />
+          </Suspense>
         </main>
         <Footer />
       </div>

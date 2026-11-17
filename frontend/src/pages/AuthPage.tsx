@@ -223,7 +223,7 @@ function AuthForm({ mode, next, email, setEmail, onModeChange, onForgot, onNeeds
           aside={
             !isSignup && (
               <button type="button" onClick={onForgot} className="text-sm text-plum-soft underline-offset-2 hover:text-plum hover:underline">
-                Забули пароль?
+                Не пам’ятаєш пароль?
               </button>
             )
           }
@@ -301,7 +301,7 @@ function CheckEmail({ email, next, onBack }: { email: string; next: string; onBa
       <h1 className="mt-5 text-4xl">Перевір пошту</h1>
       <p className="mt-3 text-plum-soft">
         Ми надіслали лист на <b className="font-medium text-ink">{email}</b>. Натисни посилання в ньому, щоб підтвердити
-        акаунт. Якщо листа нема — зазирни в «Спам».
+        акаунт. Якщо листа немає — зазирни в «Спам».
       </p>
       {error && (
         <div className="mt-5 text-left">
@@ -361,7 +361,7 @@ function ForgotForm({
 
   return (
     <div>
-      <h1 className="text-4xl">Забули пароль?</h1>
+      <h1 className="text-4xl">Не пам’ятаєш пароль?</h1>
       <p className="mt-3 text-plum-soft">Введи email — надішлемо посилання, щоб задати новий пароль.</p>
       <form onSubmit={submit} noValidate className="mt-6 space-y-4">
         <TextField
