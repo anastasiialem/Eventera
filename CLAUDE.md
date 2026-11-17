@@ -26,7 +26,8 @@ Eventera — вебсайт, що збирає концерти й театра�
 ## Стек frontend
 Vite + React + TypeScript, Tailwind CSS, react-router-dom, @tanstack/react-query,
 @supabase/supabase-js (Auth: email+пароль, опційно Google), lucide-react, framer-motion.
-Деплой: Vercel, Root Directory = `frontend`, SPA rewrite у `frontend/vercel.json`.
+Деплой: Vercel-проєкт `eventera-lviv`, через CLI з папки `frontend/` (`cd frontend && npx vercel --prod`);
+Root Directory у налаштуваннях Vercel = «.» (CLI завантажує вміст `frontend/`). SPA rewrite у `frontend/vercel.json`.
 
 Змінні середовища (frontend/.env.local):
 VITE_SUPABASE_URL, VITE_SUPABASE_ANON_KEY, VITE_API_URL (поки порожня), VITE_BACKEND_URL, VITE_DONATE_URL,
