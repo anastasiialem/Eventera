@@ -3,9 +3,11 @@ import { useCallback } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
 import { useToast } from '../components/ui/toast-context'
 import type { Event, Subscription } from '../types'
-import { addSubscription, logClick, removeSubscription } from './api'
+import { addSubscription, removeSubscription } from './api'
 import { useAuth } from './auth-context'
 import { useSubscriptions } from './use-subscriptions'
+import { FREE_LIMIT } from './vip'
+import { useVip } from './vip-context'
 
 export const lower = (s: string | null | undefined) => (s ?? '').trim().toLowerCase()
 
@@ -31,6 +33,7 @@ interface AddVars {
  */
 export function useSubscriptionActions() {
   const { user } = useAuth()
+  const { isVip, openVip } = useVip()
   const queryClient = useQueryClient()
   const toast = useToast()
   const userId = user?.id
@@ -103,10 +106,14 @@ export function useSubscriptionActions() {
         toast(`«${clean}» уже є у твоєму списку`)
         return false
       }
+      if (!isVip && list.length >= FREE_LIMIT) {
+        openVip(`В безкоштовному тарифі — до ${FREE_LIMIT} артистів`)
+        return false
+      }
       addMutate({ name: clean, artistId })
       return true
     },
-    [addMutate, queryClient, toast, userId],
+    [addMutate, queryClient, toast, userId, isVip, openVip],
   )
 
   const remove = useCallback(
@@ -142,8 +149,9 @@ export function useBell(event: Event) {
       navigate(`/auth?mode=signup&next=${encodeURIComponent(location.pathname + location.search)}`)
       return
     }
+    // clicks.kind='subscribe' — лише кнопка VIP «Підписатися»; дзвіночок у статистику не пишемо
     if (current) remove(current)
-    else if (add(name, artist?.id)) void logClick('subscribe', event.id)
+    else add(name, artist?.id)
   }
 
   return {

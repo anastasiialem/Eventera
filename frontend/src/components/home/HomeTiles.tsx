@@ -140,7 +140,7 @@ function TelegramTile() {
   )
 }
 
-/** Дві плитки під блоком «Цього тижня». Під ними — місце під SupportActions (Промпт 9). */
+/** Дві плитки під блоком «Цього тижня». Під ними на головній — SupportActions. */
 export function HomeTiles() {
   return (
     <div className="grid grid-cols-2 gap-3 sm:gap-5">

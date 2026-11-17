@@ -19,6 +19,7 @@ import type {
   Subscription,
   SubscriptionKind,
   TelegramStatus,
+  VipRequest,
 } from '../types'
 import { normalizeCategory } from './eventImage'
 import { getAccessToken, getUserId, supabase } from './supabase'
@@ -767,6 +768,44 @@ export async function linkTelegram({ isLoggedIn, navigate, next }: LinkTelegramO
     openInTab(TELEGRAM_BOT_URL)
     return 'fallback'
   }
+}
+
+// ---------------------------------------------------------------------------
+// VIP: заявки «Я оплатив(-ла)» (vip_requests з infra/supabase/schema.sql, RLS — лише свої рядки)
+// ---------------------------------------------------------------------------
+
+/** Остання власна заявка або null (немає Supabase / таблиці / заявок). */
+export async function getLatestVipRequest(): Promise<VipRequest | null> {
+  if (!supabase || !(await getUserId())) return null
+  try {
+    const { data, error } = await supabase
+      .from('vip_requests')
+      .select('id, email, status, created_at')
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .maybeSingle()
+    if (error) throw error
+    return (data as VipRequest | null) ?? null
+  } catch (err) {
+    console.warn('[eventera] getLatestVipRequest: не вдалося прочитати vip_requests', err)
+    return null
+  }
+}
+
+/** «Я оплатив(-ла)»: нова заявка зі статусом pending. Кидає помилку з текстом для тосту. */
+export async function requestVip(email: string): Promise<VipRequest> {
+  const userId = await getUserId()
+  if (!supabase || !userId) throw new Error('Потрібно увійти')
+  const { data, error } = await supabase
+    .from('vip_requests')
+    .insert({ user_id: userId, email: email.trim().toLowerCase() })
+    .select('id, email, status, created_at')
+    .single()
+  if (error) {
+    console.warn('[eventera] requestVip: не вдалося створити заявку', error)
+    throw new Error('Не вдалося надіслати заявку — спробуй ще раз або напиши нам у Telegram')
+  }
+  return data as VipRequest
 }
 
 /** Скільки разів натискали «Задонатити» (RPC donate_clicks_count з infra/supabase/schema.sql). */

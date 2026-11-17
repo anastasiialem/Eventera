@@ -1,5 +1,6 @@
 -- =====================================================================
--- Eventera: аналітика для звіту — feedback, clicks і лічильник донатів.
+-- Eventera: аналітика для звіту — feedback, clicks, лічильник донатів
+-- і заявки на VIP (vip_requests).
 --
 -- Основна схема (events, artists, profiles, subscriptions, telegram_*)
 -- живе в supabase/migrations/ (Роль 3). Цей файл накатувати ПІСЛЯ неї:
@@ -26,16 +27,22 @@ create table if not exists public.feedback (
 create index if not exists feedback_created_at_idx on public.feedback (created_at);
 
 -- ---------------------------------------------------------------------
--- Кліки: донат, підписка, квитки, Telegram
+-- Кліки: донат, «Підписатися» (VIP), квитки, Telegram, «Оплатити 39 ₴» (vip_pay)
 -- ---------------------------------------------------------------------
 
 create table if not exists public.clicks (
   id          bigint generated always as identity primary key,
   user_id     uuid references auth.users (id) on delete set null,
-  kind        text not null check (kind in ('donate', 'subscribe', 'ticket', 'telegram')),
+  kind        text not null constraint clicks_kind_check
+                check (kind in ('donate', 'subscribe', 'ticket', 'telegram', 'vip_pay')),
   event_id    bigint references public.events (id) on delete set null,
   created_at  timestamptz not null default now()
 );
+
+-- Для вже створеної таблиці: оновлюємо список дозволених kind
+alter table public.clicks drop constraint if exists clicks_kind_check;
+alter table public.clicks add constraint clicks_kind_check
+  check (kind in ('donate', 'subscribe', 'ticket', 'telegram', 'vip_pay'));
 
 create index if not exists clicks_kind_created_at_idx on public.clicks (kind, created_at);
 create index if not exists clicks_event_id_idx on public.clicks (event_id);
@@ -82,3 +89,37 @@ $$;
 
 revoke all on function public.donate_clicks_count() from public;
 grant execute on function public.donate_clicks_count() to anon, authenticated;
+
+-- ---------------------------------------------------------------------
+-- VIP-підписка 39 ₴/міс: заявки «Я оплатив(-ла)». Оплата — в окрему банку
+-- monobank «Eventera VIP», підтвердження вручну (infra/README.md →
+-- «Як підтвердити VIP»): profiles.vip_until (колонку додає Роль 3) +
+-- status = 'approved'. Користувач бачить і створює лише свої заявки,
+-- статус змінити не може (лише service_role / SQL Editor).
+-- ---------------------------------------------------------------------
+
+create table if not exists public.vip_requests (
+  id          bigint generated always as identity primary key,
+  user_id     uuid not null default auth.uid() references auth.users (id) on delete cascade,
+  email       text not null check (char_length(email) between 3 and 320),
+  created_at  timestamptz not null default now(),
+  status      text not null default 'pending' check (status in ('pending', 'approved', 'rejected'))
+);
+
+create index if not exists vip_requests_user_created_idx on public.vip_requests (user_id, created_at desc);
+create index if not exists vip_requests_email_idx on public.vip_requests (email);
+
+alter table public.vip_requests enable row level security;
+
+drop policy if exists "own vip_requests: insert" on public.vip_requests;
+create policy "own vip_requests: insert" on public.vip_requests
+  for insert to authenticated
+  with check (user_id = (select auth.uid()) and status = 'pending');
+
+drop policy if exists "own vip_requests: read" on public.vip_requests;
+create policy "own vip_requests: read" on public.vip_requests
+  for select to authenticated
+  using (user_id = (select auth.uid()));
+
+revoke all on public.vip_requests from anon, authenticated;
+grant select, insert on public.vip_requests to authenticated;

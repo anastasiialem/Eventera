@@ -7,6 +7,7 @@ import { useToast } from '../components/ui/toast-context'
 import { useAuth } from '../lib/auth-context'
 import { authErrorMessage, isEmail, MIN_PASSWORD, safeNext } from '../lib/auth-errors'
 import { cn } from '../lib/cn'
+import { markVipPending } from '../lib/vip'
 import {
   isSupabaseConfigured,
   resendSignupEmail,
@@ -31,6 +32,12 @@ export default function AuthPage() {
 
   const [view, setView] = useState<View>('form')
   const [email, setEmail] = useState('')
+
+  // ?vip=1 — прийшли з «Підписатися»: після входу модалка VIP відкриється сама
+  const wantsVip = params.get('vip') === '1'
+  useEffect(() => {
+    if (wantsVip) markVipPending()
+  }, [wantsVip])
 
   // Уже залогінені — одразу далі
   if (!loading && user && view === 'form') return <Navigate to={next} replace />

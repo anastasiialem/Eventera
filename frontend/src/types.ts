@@ -141,7 +141,17 @@ export interface Subscription {
   label: string
 }
 
-export type ClickKind = 'donate' | 'subscribe' | 'ticket' | 'telegram'
+export type ClickKind = 'donate' | 'subscribe' | 'ticket' | 'telegram' | 'vip_pay'
+
+export type VipRequestStatus = 'pending' | 'approved' | 'rejected'
+
+/** Рядок vip_requests (infra/supabase/schema.sql): «Я оплатив(-ла)» → перевірка вручну. */
+export interface VipRequest {
+  id: number
+  email: string
+  status: VipRequestStatus
+  created_at: string
+}
 
 export type WouldPay = 'yes' | 'maybe' | 'no'
 

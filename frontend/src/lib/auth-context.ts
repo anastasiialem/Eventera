@@ -9,6 +9,8 @@ export interface Profile {
   telegram_alerts: boolean
   created_at: string
   updated_at: string
+  /** VIP активний до цієї дати. Колонку додає Роль 3; поки її немає — undefined (безкоштовний тариф). */
+  vip_until?: string | null
 }
 
 export interface AuthState {
