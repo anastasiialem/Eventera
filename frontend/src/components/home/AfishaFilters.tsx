@@ -79,7 +79,7 @@ function useAgo(iso: string | number | null) {
 interface Props {
   total: number
   loading: boolean
-  /** max(first_seen_at) або час запиту */
+  /** max(event_sources.last_seen_at) або час запиту */
   updatedAt: string | number | null
 }
 

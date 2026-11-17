@@ -10,7 +10,7 @@
 Наша мета — щоб людина не пропускала подій, які їй важливі, і не мусила для цього стежити за десятками сайтів.
 Додай артиста до списку «Я чекаю на…», і бот у Telegram напише, щойно в нього з'явиться подія у Львові.
 
-**Живе демо:** https://eventera-lviv.vercel.app · **Бот:** [@Eventera_lviv_bot](https://t.me/Eventera_lviv_bot) ·
+**Живе демо:** [eventera-lviv.vercel.app](https://eventera-lviv.vercel.app) · **Бот:** [@Eventera_lviv_bot](https://t.me/Eventera_lviv_bot) ·
 **API:** https://eventera-api-hbgc.onrender.com/health
 
 ![Головна сторінка Eventera](docs/screenshot.png)
