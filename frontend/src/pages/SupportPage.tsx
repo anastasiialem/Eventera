@@ -8,7 +8,7 @@ import { DashedRings } from '../components/ui/DashedRings'
 import { GelTile } from '../components/ui/GelTile'
 import { TariffTable } from '../components/vip/TariffTable'
 import { getDonateCount, logClick } from '../lib/api'
-import { DONATE_URL } from '../lib/donate'
+import { DONATE_NOTE, DONATE_URL } from '../lib/donate'
 import { VIP_NOTE, VIP_PRICE } from '../lib/vip'
 
 /** «раз» / «рази» / «разів» */
@@ -40,9 +40,7 @@ function DonateSection() {
         <h2 id="donate-title" className="font-display text-3xl leading-tight text-plum-dark sm:text-4xl">
           Донат на «Повернись живим»
         </h2>
-        <p className="max-w-md text-plum-dark/80">
-          Банка monobank для фонду «Повернись живим». Усі кошти йдуть фонду — Eventera з цих грошей не отримує нічого.
-        </p>
+        <p className="max-w-md text-plum-dark/80">{DONATE_NOTE}.</p>
 
         <div className="flex flex-col gap-5 sm:flex-row sm:items-center">
           {DONATE_URL && (

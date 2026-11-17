@@ -1,4 +1,5 @@
 import { Check, Heart, Loader2, Send } from 'lucide-react'
+import { DONATE_NOTE } from '../../lib/donate'
 import { useTelegramLink } from '../../lib/use-telegram-link'
 import { useTelegramStatus } from '../../lib/use-telegram-status'
 import { SupportActions } from '../SupportActions'
@@ -66,6 +67,7 @@ export function DonateBlock() {
         </VibratingIcon>
       </span>
       <h2 className="relative max-w-[12ch] text-[1.65rem] leading-tight text-plum-dark">Йдеш на концерт — підтримай збір</h2>
+      <p className="relative mt-2 max-w-[22ch] text-xs leading-relaxed text-plum-dark/75">{DONATE_NOTE}.</p>
       <p className="relative mt-3 max-w-[18ch] text-sm leading-relaxed text-plum-dark/80">
         Навіть кілька гривень допоможе «Повернись живим»!
       </p>
