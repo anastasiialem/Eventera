@@ -1,5 +1,5 @@
 import { ArrowLeft } from 'lucide-react'
-import type { ReactNode } from 'react'
+import { useState, type ReactNode } from 'react'
 import { Link } from 'react-router-dom'
 import { DashedRings } from '../ui/DashedRings'
 import { Logo } from '../ui/Logo'
@@ -7,24 +7,40 @@ import { Logo } from '../ui/Logo'
 /**
  * Розкладка /auth за design/04-auth.png: ліворуч декоративна панель
  * «не встиг купити квитки на подію?», праворуч — форма.
- * Фото: якщо покласти public/images/auth/cover.jpg — воно ляже під градієнт.
+ * Фото: public/images/auth/cover.jpg (object-cover, по центру). Немає файлу — лишається градієнт.
  */
 export function AuthShell({ children }: { children: ReactNode }) {
+  const [coverOk, setCoverOk] = useState(true)
+
   return (
     <div className="min-h-screen lg:grid lg:grid-cols-2">
       <aside
         className="relative isolate flex min-h-[15rem] flex-col justify-between overflow-hidden bg-plum-dark p-5 text-white sm:min-h-[18rem] sm:p-8 lg:sticky lg:top-0 lg:h-screen"
         style={{
           backgroundImage: [
-            'linear-gradient(180deg, rgb(46 27 40 / .35) 0%, rgb(46 27 40 / .55) 55%, rgb(46 27 40 / .85) 100%)',
-            'url(/images/auth/cover.jpg)',
             'radial-gradient(60% 55% at 30% 70%, rgb(232 128 106 / .55), transparent 70%)',
             'radial-gradient(50% 45% at 80% 20%, rgb(201 182 228 / .45), transparent 70%)',
           ].join(', '),
-          backgroundSize: 'cover',
-          backgroundPosition: 'center',
         }}
       >
+        {coverOk && (
+          <img
+            src="/images/auth/cover.jpg"
+            alt=""
+            aria-hidden
+            onError={() => setCoverOk(false)}
+            className="absolute inset-0 -z-20 h-full w-full object-cover object-center"
+          />
+        )}
+        {/* Затемнення: легке зверху (лого), сильне знизу — під білим заголовком */}
+        <div
+          aria-hidden
+          className="absolute inset-0 -z-10"
+          style={{
+            background:
+              'linear-gradient(180deg, rgb(46 27 40 / .45) 0%, rgb(46 27 40 / .15) 30%, rgb(46 27 40 / .55) 60%, rgb(46 27 40 / .9) 100%)',
+          }}
+        />
         <DashedRings
           rings={4}
           size={520}
@@ -41,7 +57,7 @@ export function AuthShell({ children }: { children: ReactNode }) {
         </div>
 
         <div className="relative mt-8 max-w-xl pb-6 lg:pb-16">
-          <p className="font-display text-[2rem] leading-[1.05] sm:text-5xl lg:text-6xl xl:text-7xl">
+          <p className="font-display text-[2rem] leading-[1.05] [text-shadow:0_2px_18px_rgb(46_27_40/.45)] sm:text-5xl lg:text-6xl xl:text-7xl">
             не встиг купити квитки на подію?
           </p>
           <p

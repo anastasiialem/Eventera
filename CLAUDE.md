@@ -29,11 +29,13 @@ Vite + React + TypeScript, Tailwind CSS, react-router-dom, @tanstack/react-query
 Деплой: Vercel, Root Directory = `frontend`, SPA rewrite у `frontend/vercel.json`.
 
 Змінні середовища (frontend/.env.local):
-VITE_SUPABASE_URL, VITE_SUPABASE_ANON_KEY, VITE_API_URL, VITE_DONATE_URL,
-VITE_TELEGRAM_BOT_URL, VITE_ENABLE_GOOGLE
+VITE_SUPABASE_URL, VITE_SUPABASE_ANON_KEY, VITE_API_URL (поки порожня), VITE_BACKEND_URL, VITE_DONATE_URL,
+VITE_TELEGRAM_BOT_URL (https://t.me/Eventera_lviv_bot), VITE_ENABLE_GOOGLE
 
 ## Маршрути
-- `/` — головна: hero + плитки «Задонать!» / «Сповіщення в Telegram» + «Цього тижня у Львові» + афіша з фільтрами
+- `/` — головна: hero + плитки «Задонать!» / «Сповіщення в Telegram» + «Цього тижня у Львові» + афіша з фільтрами.
+  Афіша показує всі події з пагінацією по 12 (useInfiniteQuery + range, кнопка «Показати ще події»);
+  лічильник «N подій» — загальна кількість за фільтрами (count: 'exact'), зміна фільтрів скидає пагінацію.
 - `/event/:id` — сторінка події
 - `/waitlist` — «Я чекаю на…» (тільки для залогінених)
 - `/auth` (`?mode=signup`), `/auth/callback`, `/auth/reset`
@@ -69,7 +71,17 @@ RPC `donate_clicks_count()` — кількість кліків «Задонат
 GET /api/events?period=week|month|season|year&category=&price_max=&free=&genre=&q=&limit=&offset=
 GET /api/events/:id · GET /api/events/:id/similar · GET /api/stats
 GET|POST|DELETE /api/subscriptions (Authorization: Bearer <supabase access_token>)
-POST /api/telegram/link → { url: "https://t.me/eventera_bot?start=<token>" }
+
+## Telegram-бот @Eventera_lviv_bot (бекенд Ролі 3, `VITE_BACKEND_URL`)
+`VITE_BACKEND_URL` = https://eventera-api-hbgc.onrender.com — поки лише для прив'язки Telegram (VITE_API_URL для цього НЕ використовуємо).
+POST ${VITE_BACKEND_URL}/api/telegram/link (Authorization: Bearer <access_token>) → { url: "https://t.me/Eventera_lviv_bot?start=<token>" }.
+Уся дія — `linkTelegram()` у `src/lib/api.ts`, у компонентах — хук `useTelegramLink()` (`src/lib/use-telegram-link.ts`):
+- гість → /auth?mode=signup&next=<поточна сторінка>;
+- залогінений → порожня вкладка відкривається синхронно в onClick (щоб не заблокував попап), потім POST, url підставляється у вкладку;
+  на кнопці спінер «Прокидаємо бота…» (Render засинає, перший запит до ~50 с), таймаут 60 с;
+- помилка / таймаут → тост, та сама вкладка відкриває VITE_TELEGRAM_BOT_URL;
+- завжди logClick('telegram').
+Використовувати всюди, де є «Сповіщення в Telegram»: головна, футер, сторінка події, /waitlist, модалка «Підписатися».
 
 ## Дизайн (джерело правди — PNG у `design/`)
 - Фон пудровий ~#F5E9EC, картки ~#FFFBFA, радіус 20–24px, м'які тіні.

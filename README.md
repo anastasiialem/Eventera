@@ -26,6 +26,13 @@ npm run dev                  # http://localhost:5173
 Без `.env.local` сайт працює на демо-даних (`frontend/src/mocks/events.ts`).
 Порядок джерел даних: API (`VITE_API_URL`) → Supabase напряму → моки.
 
+## Telegram-бот
+
+Сповіщення надсилає бот [@Eventera_lviv_bot](https://t.me/Eventera_lviv_bot) (код — `backend/app/`, деплой на Render).
+Кнопка «Сповіщення в Telegram» на сайті просить у бекенду (`VITE_BACKEND_URL`) одноразове посилання
+`https://t.me/Eventera_lviv_bot?start=<токен>`, яке прив'язує Telegram до акаунта. Безкоштовний Render засинає,
+тому перше натискання може тривати до хвилини; якщо бекенд не відповів — відкривається просто бот.
+
 ## База даних
 
 1. Міграції з `supabase/migrations/` (див. `supabase/README.md`).
@@ -33,4 +40,5 @@ npm run dev                  # http://localhost:5173
 
 ## Деплой
 
-Детальніше — у `infra/README.md`. Коротко: Vercel, Root Directory = `frontend`, змінні з `frontend/.env.example`.
+Детальніше — у `infra/README.md`. Коротко: Vercel, Root Directory = `frontend`, змінні з `frontend/.env.example`
+(`VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY`, `VITE_BACKEND_URL`, `VITE_TELEGRAM_BOT_URL`, `VITE_DONATE_URL`, `VITE_ENABLE_GOOGLE`).

@@ -161,22 +161,44 @@ export function filterEvents(events: Event[], f: EventFilters = {}): Event[] {
     )
   }
   list.sort((a, b) => a.starts_at.localeCompare(b.starts_at))
-  const offset = f.offset ?? 0
-  return list.slice(offset, f.limit ? offset + f.limit : undefined)
+  return list
 }
 
 /** Екранування для ilike: % і _ — службові символи. */
 const likeEscape = (s: string) => s.replace(/[\\%_]/g, (m) => `\\${m}`)
 
-export async function getEvents(filters: EventFilters = {}): Promise<Event[]> {
-  return readChain(
+/** Розмір сторінки афіші на головній. */
+export const EVENTS_PAGE_SIZE = 12
+
+export interface EventsPage {
+  items: Event[]
+  /** Загальна кількість подій з урахуванням фільтрів (не довжина items). */
+  total: number
+  offset: number
+}
+
+/**
+ * Одна сторінка афіші. Без `limit` — усі події (без штучного ліміту).
+ * `total` — точна кількість за фільтрами (Supabase count: 'exact').
+ */
+export async function getEvents(filters: EventFilters = {}): Promise<EventsPage> {
+  const offset = filters.offset ?? 0
+  const limit = filters.limit
+  return readChain<EventsPage>(
     'getEvents',
     apiOr(async () => {
       const data = await request<unknown>(`/api/events${buildQuery({ ...filters })}`)
-      return unwrapList<EventFeedRow>(data).map(normalizeEvent)
+      const items = unwrapList<EventFeedRow>(data).map(normalizeEvent)
+      const meta = (data && typeof data === 'object' && !Array.isArray(data) ? data : {}) as Record<string, unknown>
+      const total = Number(meta.total ?? meta.count ?? NaN)
+      return { items, total: Number.isFinite(total) ? total : offset + items.length, offset }
     }),
     dbOr(async () => {
-      let q = supabase!.from('event_feed').select(EVENT_FEED_COLUMNS).order('starts_at', { ascending: true })
+      let q = supabase!
+        .from('event_feed')
+        .select(EVENT_FEED_COLUMNS, { count: 'exact' })
+        .order('starts_at', { ascending: true })
+        .order('id', { ascending: true })
       if (filters.period) {
         const { from, to } = periodRange(filters.period)
         q = q.gte('starts_at', from.toISOString()).lte('starts_at', to.toISOString())
@@ -188,13 +210,16 @@ export async function getEvents(filters: EventFilters = {}): Promise<Event[]> {
       if (filters.price_max !== undefined) q = q.lte('price_min', filters.price_max)
       if (filters.genre) q = q.contains('genres', [{ slug: filters.genre }])
       if (filters.q?.trim()) q = q.ilike('title', `%${likeEscape(filters.q.trim())}%`)
-      const offset = filters.offset ?? 0
-      q = q.range(offset, offset + (filters.limit ?? 100) - 1)
-      const { data, error } = await q
+      if (limit) q = q.range(offset, offset + limit - 1)
+      const { data, error, count } = await q
       if (error) throw error
-      return (data as unknown as EventFeedRow[]).map(normalizeEvent)
+      const items = (data as unknown as EventFeedRow[]).map(normalizeEvent)
+      return { items, total: count ?? offset + items.length, offset }
     }),
-    () => filterEvents(mockEvents, filters),
+    () => {
+      const all = filterEvents(mockEvents, filters)
+      return { items: all.slice(offset, limit ? offset + limit : undefined), total: all.length, offset }
+    },
   )
 }
 
@@ -505,6 +530,84 @@ export async function sendFeedback(data: FeedbackInput): Promise<boolean> {
   } catch (err) {
     console.warn('[eventera] sendFeedback: не вдалося надіслати відгук', err)
     return false
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Прив'язка Telegram через бекенд Ролі 3 (backend/README.md):
+// POST ${VITE_BACKEND_URL}/api/telegram/link, Bearer <access_token> → { url }
+// ---------------------------------------------------------------------------
+
+const BACKEND_URL = import.meta.env.VITE_BACKEND_URL?.replace(/\/+$/, '') || null
+export const TELEGRAM_BOT_URL = import.meta.env.VITE_TELEGRAM_BOT_URL || 'https://t.me/Eventera_lviv_bot'
+/** Render засинає: перший запит після сну може йти до ~50 с. */
+const TELEGRAM_LINK_TIMEOUT_MS = 60_000
+
+export type TelegramLinkResult =
+  /** гість — відправили на реєстрацію */
+  | 'auth'
+  /** відкрили персональне посилання з токеном */
+  | 'linked'
+  /** бекенд не відповів — відкрили просто бота */
+  | 'fallback'
+
+export interface LinkTelegramOptions {
+  /** Чи є сесія (з useAuth) — перевіряємо синхронно, щоб не втратити жест користувача. */
+  isLoggedIn: boolean
+  /** Перехід усередині SPA (useNavigate). */
+  navigate: (to: string) => void
+  /** Куди повернути гостя після реєстрації. За замовчуванням — поточна сторінка. */
+  next?: string
+}
+
+/**
+ * Кнопка «Сповіщення в Telegram». ВИКЛИКАТИ ПРЯМО В ОБРОБНИКУ КЛІКУ:
+ * порожня вкладка відкривається синхронно (до першого await), інакше браузер заблокує попап.
+ */
+export async function linkTelegram({ isLoggedIn, navigate, next }: LinkTelegramOptions): Promise<TelegramLinkResult> {
+  void logClick('telegram')
+
+  if (!isLoggedIn) {
+    const back = next ?? `${window.location.pathname}${window.location.search}`
+    navigate(`/auth?mode=signup&next=${encodeURIComponent(back)}`)
+    return 'auth'
+  }
+
+  // Синхронно, у межах жесту користувача. Без noopener — інакше window.open поверне null.
+  const tab = window.open('', '_blank')
+  try {
+    if (tab) {
+      tab.document.title = 'Прокидаємо бота…'
+      tab.document.body.style.cssText =
+        'margin:0;display:grid;place-items:center;height:100vh;background:#F5E9EC;color:#4A2A3F;font:500 18px system-ui,sans-serif'
+      tab.document.body.textContent = 'Прокидаємо бота… це може зайняти до хвилини'
+    }
+  } catch {
+    /* вкладка вже з іншого origin — не страшно */
+  }
+  const openInTab = (url: string) => {
+    if (tab && !tab.closed) tab.location.href = url
+    else window.open(url, '_blank', 'noopener')
+  }
+
+  try {
+    if (!BACKEND_URL) throw new Error('VITE_BACKEND_URL не задано')
+    const token = await getAccessToken()
+    if (!token) throw new Error('Немає access_token')
+    const res = await fetch(`${BACKEND_URL}/api/telegram/link`, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${token}`, Accept: 'application/json' },
+      signal: AbortSignal.timeout(TELEGRAM_LINK_TIMEOUT_MS),
+    })
+    if (!res.ok) throw new Error(`POST /api/telegram/link → ${res.status}`)
+    const { url } = (await res.json()) as { url?: string }
+    if (!url || !/^https:\/\/t\.me\//.test(url)) throw new Error('Неочікувана відповідь бекенду')
+    openInTab(url)
+    return 'linked'
+  } catch (err) {
+    console.warn('[eventera] linkTelegram: бекенд недоступний, відкриваю бота без токена', err)
+    openInTab(TELEGRAM_BOT_URL)
+    return 'fallback'
   }
 }
 
