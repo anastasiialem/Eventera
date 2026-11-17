@@ -13,7 +13,7 @@
 | `frontend/` | Сайт: Vite + React + TypeScript + Tailwind, деплой на Vercel |
 | `backend/` | Парсер афіш, API і Telegram-бот (деплой на Render) |
 | `supabase/` | Основна схема бази даних (міграції) |
-| `infra/` | SQL для аналітики, нотатки про деплой |
+| `infra/` | Dockerfile-и, docker-compose, nginx, SQL для аналітики, нотатки про деплой |
 | `design/` | Макети й опис продукту |
 
 ## Запуск фронтенду локально
@@ -27,6 +27,15 @@ npm run dev                  # http://localhost:5173
 
 Без `.env.local` сайт працює на демо-даних (`frontend/src/mocks/events.ts`).
 Порядок джерел даних: API (`VITE_API_URL`) → Supabase напряму → моки.
+
+## Усе разом у Docker
+
+```bash
+cp .env.example .env    # заповни значення
+docker compose --env-file .env -f infra/docker-compose.yml up --build   # сайт: http://localhost:8080
+```
+
+Подробиці (окремий запуск парсера, секрети GitHub Actions) — у `infra/README.md`.
 
 ## Парсер афіш
 
