@@ -20,6 +20,7 @@ import type {
   SubscriptionKind,
   TelegramStatus,
 } from '../types'
+import { normalizeCategory } from './eventImage'
 import { getAccessToken, getUserId, supabase } from './supabase'
 
 const API_URL = import.meta.env.VITE_API_URL?.replace(/\/+$/, '') || null
@@ -108,7 +109,7 @@ export function normalizeEvent(row: EventFeedRow): Event {
     slug: row.slug,
     title: row.title,
     description: row.description ?? null,
-    category: row.category,
+    category: normalizeCategory(row.category),
     status: row.status ?? 'scheduled',
     starts_at: row.starts_at,
     ends_at: row.ends_at ?? null,

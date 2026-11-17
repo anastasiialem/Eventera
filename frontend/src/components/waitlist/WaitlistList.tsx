@@ -5,6 +5,7 @@ import { logClick } from '../../lib/api'
 import { formatDayMonth, plural } from '../../lib/format'
 import { isPendingSub, lower } from '../../lib/use-subscription-actions'
 import { matchEvent } from '../../lib/waitlist'
+import { EventImage } from '../EventImage'
 import type { Event, Subscription } from '../../types'
 import { Skeleton } from '../ui/Skeleton'
 
@@ -70,12 +71,20 @@ export function WaitlistList({ subscriptions, events, loading, onRemove }: Props
                   transition={{ duration: reduce ? 0 : 0.2 }}
                   className="flex items-center gap-3 rounded-card bg-card p-3 shadow-soft sm:gap-4 sm:p-4"
                 >
-                  <span
-                    aria-hidden
-                    className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-[radial-gradient(circle_at_35%_30%,#D9C6EC,#9A7DB8_60%,#7A5C94)] font-display text-xl text-white shadow-soft sm:h-14 sm:w-14"
-                  >
-                    {sub.label.trim().charAt(0).toUpperCase() || '?'}
-                  </span>
+                  {event ? (
+                    <EventImage
+                      event={event}
+                      decorative
+                      className="h-12 w-12 shrink-0 rounded-full shadow-soft sm:h-14 sm:w-14"
+                    />
+                  ) : (
+                    <span
+                      aria-hidden
+                      className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-[radial-gradient(circle_at_35%_30%,#D9C6EC,#9A7DB8_60%,#7A5C94)] font-display text-xl text-white shadow-soft sm:h-14 sm:w-14"
+                    >
+                      {sub.label.trim().charAt(0).toUpperCase() || '?'}
+                    </span>
+                  )}
 
                   <div className="min-w-0 flex-1">
                     <p className="truncate font-display text-lg text-ink sm:text-xl">{sub.label}</p>
