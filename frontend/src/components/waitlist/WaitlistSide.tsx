@@ -23,7 +23,7 @@ export function TelegramCard() {
   const { linked, username } = useTelegramStatus()
 
   return (
-    <GelTile variant="telegram" className="overflow-hidden rounded-[28px] p-5 sm:p-6">
+    <GelTile variant="telegram" className="rounded-[28px] p-5 sm:p-6">
       <div className="flex items-start justify-between gap-3">
         <h2 className="text-2xl text-plum-dark">Telegram</h2>
         {linked && (
@@ -34,8 +34,10 @@ export function TelegramCard() {
       </div>
 
       <div className="relative mx-auto my-3 flex aspect-square w-40 items-center justify-center">
-        <DashedRings rings={2} size={160} inner={74} className="absolute inset-0 h-full w-full text-plum/45" />
-        <span className="flex h-16 w-16 items-center justify-center rounded-full bg-plum text-white shadow-lift">
+        <span className="spin-slow absolute inset-0 flex">
+          <DashedRings rings={2} size={160} inner={74} className="h-full w-full text-plum/45" />
+        </span>
+        <span className="relative flex h-16 w-16 items-center justify-center rounded-full bg-[linear-gradient(145deg,#7A5A8E,#5A3A6E)] text-white shadow-lift">
           {telegram.pending ? (
             <Loader2 size={24} className="animate-spin motion-reduce:animate-none" aria-hidden />
           ) : (

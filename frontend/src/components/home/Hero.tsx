@@ -3,10 +3,8 @@ import { useState, type FormEvent } from 'react'
 import { Button } from '../ui/Button'
 import { DashedRings } from '../ui/DashedRings'
 import { Pill } from '../ui/Pill'
+import { HeroSlideshow } from './HeroSlideshow'
 import { scrollToAfisha, useHomeFilters } from './use-home-filters'
-
-// Поки статично перше фото; crossfade-слайдшоу — Промпт 7.
-const HERO_PHOTO = '/images/hero/hero-1.jpg'
 
 /** Лівий темний блок головної: фото, заголовок, пошук і швидкі фільтри. */
 export function Hero() {
@@ -36,24 +34,12 @@ export function Hero() {
         aria-labelledby="hero-title"
         className="relative isolate flex min-h-[500px] flex-col overflow-hidden rounded-[36px] bg-plum-dark px-6 pb-7 pt-20 text-white sm:px-8 sm:pb-9 lg:min-h-[540px] lg:pt-24"
       >
-        <img
-          src={HERO_PHOTO}
-          alt=""
-          fetchPriority="high"
-          className="absolute inset-0 -z-20 h-full w-full object-cover"
-        />
-        {/* Темний оверлей: заголовок угорі й пошук унизу читаються на будь-якому фото */}
-        <div
-          aria-hidden
-          className="absolute inset-0 -z-10 bg-[linear-gradient(180deg,rgba(14,8,12,.55)_0%,rgba(14,8,12,.25)_38%,rgba(14,8,12,.55)_62%,rgba(8,4,7,.92)_100%)]"
-        />
-        <div aria-hidden className="absolute inset-0 -z-10 bg-gradient-to-r from-black/45 via-black/10 to-transparent" />
+        <HeroSlideshow />
 
         {/* Пунктирні дуги */}
         <DashedRings rings={2} size={620} inner={78} strokeWidth={1.4} className="absolute -right-[300px] -top-[250px] -z-10 text-white/30" />
         <DashedRings rings={1} size={420} inner={100} strokeWidth={1.2} className="absolute -right-[260px] top-[150px] -z-10 hidden text-white/20 sm:block" />
 
-        <span aria-hidden className="absolute left-7 top-14 h-2 w-2 rounded-full bg-coral sm:left-9 lg:top-16" />
         <p
           aria-hidden
           className="absolute right-6 top-9 -rotate-[8deg] font-script text-base text-[#F4A893] sm:right-10 sm:top-12 sm:text-xl lg:text-2xl"
