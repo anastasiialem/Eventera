@@ -49,7 +49,7 @@ export function DateHero({ event }: { event: Event }) {
           </span>
         ))}
         {status && (
-          <span className="rounded-full bg-coral px-3.5 py-1.5 text-sm font-medium text-white">{status}</span>
+          <span className="rounded-full bg-coral px-3.5 py-1.5 text-sm font-medium text-plum-dark">{status}</span>
         )}
       </div>
 

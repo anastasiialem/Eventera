@@ -21,10 +21,10 @@ export function SupportActions({ tone = 'light', className }: { tone?: 'light' |
     base,
     dark ? 'bg-white text-plum-dark hover:bg-lavender-soft' : 'bg-plum text-white hover:bg-plum-dark',
   )
-  const donateCls = cn(base, 'bg-coral text-white hover:brightness-95')
+  const donateCls = cn(base, 'bg-coral text-plum-dark hover:brightness-95')
   const donateContent = (
     <span className="inline-flex items-center gap-1.5 text-sm">
-      <Heart size={16} className="fill-white/90" aria-hidden /> Задонатити
+      <Heart size={16} className="fill-current" aria-hidden /> Задонатити
     </span>
   )
 

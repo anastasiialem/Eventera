@@ -7,7 +7,8 @@ export type ButtonSize = 'sm' | 'md' | 'lg'
 
 const variants: Record<ButtonVariant, string> = {
   primary: 'bg-plum text-white hover:bg-plum-dark',
-  accent: 'bg-coral text-white hover:brightness-95',
+  // текст і іконки темно-сливові: контраст 5.9 на coral (білий — лише 2.7)
+  accent: 'bg-coral text-plum-dark hover:brightness-95',
   ghost: 'bg-transparent text-plum hover:bg-plum/5',
   outline: 'border border-line/20 bg-card/60 text-plum hover:border-line/40 hover:bg-card',
   soft: 'bg-coral-soft text-coral-deep hover:brightness-[.98]',

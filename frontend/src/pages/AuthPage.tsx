@@ -5,7 +5,7 @@ import { FormError, PasswordField, SubmitButton, TextField } from '../components
 import { AuthShell } from '../components/auth/AuthShell'
 import { useToast } from '../components/ui/toast-context'
 import { useAuth } from '../lib/auth-context'
-import { authErrorMessage, isEmail, MIN_PASSWORD, safeNext } from '../lib/auth-errors'
+import { authErrorMessage, isEmail, MIN_PASSWORD, PASSWORD_HINT, passwordErrorMessage, safeNext } from '../lib/auth-errors'
 import { cn } from '../lib/cn'
 import { markVipPending } from '../lib/vip'
 import {
@@ -136,7 +136,10 @@ function AuthForm({ mode, next, email, setEmail, onModeChange, onForgot, onNeeds
         onSignedIn()
       }
     } catch (err) {
-      setError(authErrorMessage(err))
+      // Вимоги до пароля від Supabase (weak_password) — під полем пароля, решта — загальною помилкою
+      const passwordMsg = isSignup ? passwordErrorMessage(err) : null
+      if (passwordMsg) setFieldErrors((f) => ({ ...f, password: passwordMsg }))
+      else setError(authErrorMessage(err))
     } finally {
       setBusy(false)
     }
@@ -215,10 +218,11 @@ function AuthForm({ mode, next, email, setEmail, onModeChange, onForgot, onNeeds
           label="Пароль"
           name="password"
           autoComplete={isSignup ? 'new-password' : 'current-password'}
-          placeholder={`Мінімум ${MIN_PASSWORD} символів`}
+          placeholder={isSignup ? 'Придумай пароль' : 'Твій пароль'}
           value={password}
           onChange={(e) => setPassword(e.target.value)}
           error={fieldErrors.password}
+          hint={isSignup ? PASSWORD_HINT : undefined}
           disabled={busy}
           aside={
             !isSignup && (
@@ -255,11 +259,6 @@ function AuthForm({ mode, next, email, setEmail, onModeChange, onForgot, onNeeds
         </>
       )}
 
-      {isSignup && (
-        <p className="mt-6 text-center text-xs text-plum-soft">
-          Продовжуючи, ти погоджуєшся з умовами використання і політикою конфіденційності.
-        </p>
-      )}
     </div>
   )
 }

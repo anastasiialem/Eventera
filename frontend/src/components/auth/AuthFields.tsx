@@ -41,7 +41,7 @@ export function TextField({ label, error, aside, id, ...rest }: FieldProps) {
   )
 }
 
-export function PasswordField({ label, error, aside, id, ...rest }: FieldProps) {
+export function PasswordField({ label, error, aside, hint, id, ...rest }: FieldProps & { hint?: string }) {
   const autoId = useId()
   const fieldId = id ?? autoId
   const [visible, setVisible] = useState(false)
@@ -58,7 +58,7 @@ export function PasswordField({ label, error, aside, id, ...rest }: FieldProps) 
           id={fieldId}
           type={visible ? 'text' : 'password'}
           aria-invalid={error ? true : undefined}
-          aria-describedby={error ? `${fieldId}-err` : undefined}
+          aria-describedby={error ? `${fieldId}-err` : hint ? `${fieldId}-hint` : undefined}
           className={cn(inputCls, 'pr-12', error && 'border-coral-deep/60')}
           {...rest}
         />
@@ -72,10 +72,16 @@ export function PasswordField({ label, error, aside, id, ...rest }: FieldProps) 
           {visible ? <EyeOff size={18} /> : <Eye size={18} />}
         </button>
       </div>
-      {error && (
+      {error ? (
         <p id={`${fieldId}-err`} className="text-sm text-coral-deep">
           {error}
         </p>
+      ) : (
+        hint && (
+          <p id={`${fieldId}-hint`} className="text-xs text-plum-soft">
+            {hint}
+          </p>
+        )
       )}
     </div>
   )
