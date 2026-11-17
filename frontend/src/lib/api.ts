@@ -324,19 +324,20 @@ export async function getGenres(): Promise<EventGenre[]> {
   )
 }
 
-/** Коли парсер востаннє знайшов нову подію: max(first_seen_at). null — невідомо. */
+/** Коли парсер востаннє перевіряв афішу: max(event_sources.last_seen_at).
+ *  Парсер оновлює last_seen_at при кожному запуску, навіть якщо нових подій немає. null — невідомо. */
 export async function getLastUpdated(): Promise<string | null> {
   return readChain<string | null>(
     'getLastUpdated',
     null,
     dbOr(async () => {
       const { data, error } = await supabase!
-        .from('event_feed')
-        .select('first_seen_at')
-        .order('first_seen_at', { ascending: false })
+        .from('event_sources')
+        .select('last_seen_at')
+        .order('last_seen_at', { ascending: false })
         .limit(1)
       if (error) throw error
-      return (data?.[0]?.first_seen_at as string | undefined) ?? null
+      return (data?.[0]?.last_seen_at as string | undefined) ?? null
     }),
     () => null,
   )
