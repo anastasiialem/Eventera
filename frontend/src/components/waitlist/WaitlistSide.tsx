@@ -2,7 +2,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Check, Loader2, LogOut, Send } from 'lucide-react'
 import type { ReactNode } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { getNotificationPrefs, TELEGRAM_BOT_URL, updateNotificationPrefs } from '../../lib/api'
+import { getNotificationPrefs, logClick, TELEGRAM_BOT_URL, updateNotificationPrefs } from '../../lib/api'
 import { useAuth } from '../../lib/auth-context'
 import { useTelegramLink } from '../../lib/use-telegram-link'
 import { useTelegramStatus } from '../../lib/use-telegram-status'
@@ -20,7 +20,7 @@ import { FRESH_QUERY } from '../../lib/fresh-query'
 
 const botHandle = '@' + (TELEGRAM_BOT_URL.match(/t\.me\/([\w_]+)/)?.[1] ?? 'Eventera_lviv_bot')
 
-/** Картка Telegram: «Підключено» (є рядок у telegram_links) або «Підключити» → linkTelegram(). */
+/** Картка Telegram: «Підключено» + «Перейти» в бота (є рядок у telegram_links) або «Підключити» → linkTelegram(). */
 export function TelegramCard() {
   const telegram = useTelegramLink()
   const { linked, username } = useTelegramStatus()
@@ -55,14 +55,15 @@ export function TelegramCard() {
             {username ? `@${username} · ` : ''}
             {botHandle}
           </span>
-          <button
-            type="button"
-            onClick={telegram.start}
-            disabled={telegram.pending}
-            className="shrink-0 font-medium text-plum-dark underline underline-offset-2 disabled:opacity-60"
+          <a
+            href={TELEGRAM_BOT_URL}
+            target="_blank"
+            rel="noopener noreferrer"
+            onClick={() => void logClick('telegram')}
+            className="shrink-0 font-medium text-plum-dark underline underline-offset-2"
           >
-            {telegram.pending ? 'Прокидаємо бота…' : 'Змінити'}
-          </button>
+            Перейти
+          </a>
         </div>
       ) : (
         <div className="space-y-3 text-center">

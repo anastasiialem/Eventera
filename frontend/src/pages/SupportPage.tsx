@@ -12,13 +12,13 @@ import { getDonateCount, logClick } from '../lib/api'
 import { DONATE_NOTE, DONATE_URL } from '../lib/donate'
 import { VIP_NOTE, VIP_PRICE } from '../lib/vip'
 
-/** «раз» / «рази» / «разів» */
-function timesWord(n: number) {
+/** «перехід» / «переходи» / «переходів» */
+function transitionsWord(n: number) {
   const mod10 = n % 10
   const mod100 = n % 100
-  if (mod10 === 1 && mod100 !== 11) return 'раз'
-  if (mod10 >= 2 && mod10 <= 4 && (mod100 < 12 || mod100 > 14)) return 'рази'
-  return 'разів'
+  if (mod10 === 1 && mod100 !== 11) return 'перехід'
+  if (mod10 >= 2 && mod10 <= 4 && (mod100 < 12 || mod100 > 14)) return 'переходи'
+  return 'переходів'
 }
 
 function DonateSection() {
@@ -71,7 +71,7 @@ function DonateSection() {
             {count !== undefined && count > 0 && (
               <p className="text-sm text-plum-dark">
                 <span className="font-pixel text-3xl font-black leading-none">{count}</span>{' '}
-                {timesWord(count)} натиснули «Задонатити» на Eventera
+                {transitionsWord(count)} на банку з сайту Eventera
               </p>
             )}
           </div>
