@@ -163,3 +163,17 @@ def test_vip_approve_and_reject():
     assert run(vip.reject(db, 3)).email == "b@x.ua"
     assert fake.tables["vip_requests"][2]["status"] == "rejected"
     assert fake.tables["profiles"][1]["vip_until"] is None
+
+
+def test_normalize_ignores_quotes_and_case():
+    from app.waitlist import normalize
+    assert normalize("Вистава «Крик кохання»!") == "вистава крик кохання"
+    assert "вистава крик кохання" in normalize("ВИСТАВА  \"Крик—кохання\"")
+
+
+def test_add_keyword_dedupes_case_and_quotes():
+    from app.waitlist import add_keyword
+    db, fake = make_db({"subscriptions": [{"user_id": "u1", "kind": "keyword", "keyword": "Вистава Крик кохання"}]})
+    assert run(add_keyword(db, "u1", "вистава «Крик Кохання»")).ok is False
+    assert run(add_keyword(db, "u1", "Скрябін")).ok is True
+    assert len(fake.tables["subscriptions"]) == 2

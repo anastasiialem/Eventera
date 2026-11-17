@@ -128,6 +128,24 @@ def make_router(db: Supabase, frontend_url: str) -> Router:
 
     # ---------- додати ----------
 
+    async def already_on(user_text: str, *, artist_id: int | None = None,
+                         keyword: str | None = None) -> tuple[str, InlineKeyboardMarkup | None]:
+        """Текст «Додала…» + події, що вже є в афіші, з кнопками «⏰ Нагадати за день»."""
+        events = await waitlist.upcoming_matches(db, artist_id=artist_id, keyword=keyword)
+        if not events:
+            return user_text, None
+        lines, rows = [], []
+        for e in events:
+            moved = " · <i>перенесено</i>" if e.get("status") == "postponed" else ""
+            venue = f", {html.escape(e['venue_name'])}" if e.get("venue_name") else ""
+            lines.append(f"• <b>{html.escape(e['title'])}</b> — {notify.format_when(e['starts_at'])}{venue}{moved}")
+            if e.get("status") == "scheduled":
+                rows.append([InlineKeyboardButton(text=f"⏰ {e['title'][:40]}",
+                                                  callback_data=Remind(event_id=e["id"]).pack())])
+        hint = "\nНатисни ⏰, щоб нагадала за день (VIP)." if rows else ""
+        return (f"{user_text}\n\n📅 <b>Уже в афіші:</b>\n" + "\n".join(lines) + hint,
+                InlineKeyboardMarkup(inline_keyboard=rows) if rows else None)
+
     async def search_and_offer(message: Message, query: str) -> None:
         user_id = await need_user(message.chat.id)
         if not user_id:
@@ -140,10 +158,15 @@ def make_router(db: Supabase, frontend_url: str) -> Router:
         _pending[message.chat.id] = query
         artists = await waitlist.find_artists(db, query)
         if not artists:
+            if await over_free_limit(user_id):
+                await message.answer(limit_text)
+                return
             added = await waitlist.add_keyword(db, user_id, query)
-            await message.answer(
-                f"Додала «{html.escape(added.label)}» у список 🔎 Напишу, щойно з'явиться подія з цим словом у назві чи серед артистів."
-                if added.ok else f"«{html.escape(added.label)}» уже є у твоєму списку.")
+            text, markup = await already_on(
+                f"Додала «{html.escape(added.label)}» у список 🔎 Напишу, щойно з'явиться нова подія з цим словом "
+                "у назві чи серед артистів." if added.ok else f"«{html.escape(added.label)}» уже є у твоєму списку.",
+                keyword=query)
+            await message.answer(text, reply_markup=markup)
             return
         rows = [[InlineKeyboardButton(text=f"🎤 {a['name']}", callback_data=AddArtist(artist_id=a["id"]).pack())]
                 for a in artists]
@@ -166,9 +189,11 @@ def make_router(db: Supabase, frontend_url: str) -> Router:
             await call.answer()
             return
         added = await waitlist.add_artist(db, user_id, callback_data.artist_id)
-        text = (f"Додала 🎤 <b>{html.escape(added.label)}</b> ✅ Напишу, щойно з'явиться концерт у Львові."
-                if added.ok else f"🎤 {html.escape(added.label)} уже є у твоєму списку.")
-        await call.message.edit_text(text)
+        text, markup = await already_on(
+            f"Додала 🎤 <b>{html.escape(added.label)}</b> ✅ Напишу, щойно з'явиться новий концерт у Львові."
+            if added.ok else f"🎤 {html.escape(added.label)} уже є у твоєму списку.",
+            artist_id=callback_data.artist_id)
+        await call.message.edit_text(text, reply_markup=markup)
         await call.answer()
 
     @router.callback_query(AddKeyword.filter())
@@ -183,8 +208,10 @@ def make_router(db: Supabase, frontend_url: str) -> Router:
             await call.answer()
             return
         added = await waitlist.add_keyword(db, user_id, query)
-        await call.message.edit_text(
-            f"Додала 🔎 «{html.escape(added.label)}» ✅" if added.ok else f"«{html.escape(added.label)}» уже є у списку.")
+        text, markup = await already_on(
+            f"Додала 🔎 «{html.escape(added.label)}» ✅" if added.ok else f"«{html.escape(added.label)}» уже є у списку.",
+            keyword=query)
+        await call.message.edit_text(text, reply_markup=markup)
         await call.answer()
 
     @router.callback_query(Remind.filter())
