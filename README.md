@@ -4,7 +4,7 @@
 (збирати афіші ще й із сайтів театрів і Telegram-каналів — у планах), а у списку «Я чекаю на…» можна підписатися на артиста
 й отримати сповіщення в Telegram, щойно в нього з'явиться подія у Львові.
 
-**Сайт:** <!-- TODO: вставити адресу з Vercel --> https://…vercel.app · **Бот:** [@Eventera_lviv_bot](https://t.me/Eventera_lviv_bot)
+**Сайт:** [eventera-lviv.vercel.app](https://eventera-lviv.vercel.app) · **Бот:** [@Eventera_lviv_bot](https://t.me/Eventera_lviv_bot)
 
 ## Структура
 
