@@ -17,6 +17,13 @@ function sortSources(sources: EventSource[]) {
     .sort((a, b) => (a.price_min ?? Infinity) - (b.price_min ?? Infinity))
 }
 
+/** Ticket status bar. 'unknown' shows nothing: the site did not say. */
+const AVAILABILITY: Partial<Record<Event['ticket_status'], { bar: string; label: string }>> = {
+  available: { bar: 'w-[35%] bg-gradient-to-r from-lavender to-coral', label: 'Квитки є в продажу' },
+  few_left: { bar: 'w-[85%] bg-gradient-to-r from-lavender to-coral', label: 'Мало квитків — поспішай' },
+  sold_out: { bar: 'w-full bg-gradient-to-r from-lavender to-coral', label: 'Розпродано' },
+}
+
 /** «Купити на Karabas», але «Купити квитки» для «Сайт театру». */
 const buyLabel = (source?: string) => (source && /^[A-Za-z0-9]/.test(source) ? `Купити на ${source}` : 'Купити квитки')
 
@@ -27,6 +34,7 @@ export function TicketsCard({ event, className }: { event: Event; className?: st
   const buyUrl = primary?.url ?? event.ticket_url
   const soldOut = event.ticket_status === 'sold_out'
   const fewLeft = event.ticket_status === 'few_left'
+  const availability = AVAILABILITY[event.ticket_status]
 
   const onCalendar = () => {
     downloadIcs(event)
@@ -46,17 +54,14 @@ export function TicketsCard({ event, className }: { event: Event; className?: st
 
       <p className="mt-2 font-display text-4xl leading-tight text-ink sm:text-[2.6rem]">{formatPriceRange(event)}</p>
 
-      {(fewLeft || soldOut) && (
+      {availability && (
         <div className="mt-3">
+          {/* Ticket sites publish only a status (in stock / few left / sold out), not how many
+              tickets are sold, so the bar shows that status rather than an exact percentage. */}
           <div className="h-1.5 overflow-hidden rounded-full bg-plum/[.07]" aria-hidden>
-            <div
-              className={cn(
-                'h-full rounded-full',
-                soldOut ? 'w-full bg-plum/30' : 'w-[85%] bg-gradient-to-r from-lavender to-coral',
-              )}
-            />
+            <div className={cn('h-full rounded-full', availability.bar)} />
           </div>
-          <p className="mt-1.5 text-xs text-plum-soft">{soldOut ? 'Розпродано' : 'Мало квитків'}</p>
+          <p className="mt-1.5 text-xs text-plum-soft">{availability.label}</p>
         </div>
       )}
 
