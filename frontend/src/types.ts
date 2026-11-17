@@ -112,6 +112,20 @@ export interface Profile {
   telegram_alerts: boolean
 }
 
+/** Чекбокси «Як повідомляти». Два останні — лише якщо колонки є в profiles. */
+export interface NotificationPrefs {
+  email_alerts: boolean
+  telegram_alerts: boolean
+  remind_day_before?: boolean
+  /** null — без обмеження ціни */
+  max_price?: number | null
+}
+
+export interface TelegramStatus {
+  linked: boolean
+  username: string | null
+}
+
 export type ProfilePatch = Partial<Pick<Profile, 'display_name' | 'email_alerts' | 'telegram_alerts'>>
 
 export type SubscriptionKind = 'artist' | 'event' | 'keyword'

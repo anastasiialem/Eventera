@@ -57,3 +57,40 @@ export function eventsWord(n: number) {
   if (mod10 >= 2 && mod10 <= 4 && (mod100 < 12 || mod100 > 14)) return 'події'
   return 'подій'
 }
+
+const fmt = (iso: string, opts: Intl.DateTimeFormatOptions) =>
+  new Intl.DateTimeFormat('uk-UA', { timeZone: TZ, ...opts }).format(new Date(iso))
+
+/** «19:00» */
+export const formatTime = (iso: string) => fmt(iso, { hour: '2-digit', minute: '2-digit' })
+
+/** «субота» */
+export const formatWeekday = (iso: string) => fmt(iso, { weekday: 'long' })
+
+/** «Сб, 21 листопада» */
+export function formatShortDate(iso: string) {
+  const wd = fmt(iso, { weekday: 'short' })
+  return `${wd.charAt(0).toUpperCase()}${wd.slice(1)}, ${fmt(iso, { day: 'numeric', month: 'long' })}`
+}
+
+/** «21 листопада» */
+export const formatDayMonth = (iso: string) => fmt(iso, { day: 'numeric', month: 'long' })
+
+/** «450–1 200 ₴» / «від 450 ₴» / «450 ₴» / «Вхід вільний» / «Ціну уточнюємо» */
+export function formatPriceRange(e: Pick<Event, 'price_min' | 'price_max' | 'is_free'>) {
+  if (e.is_free) return 'Вхід вільний'
+  const { price_min: min, price_max: max } = e
+  if (min === null && max === null) return 'Ціну уточнюємо'
+  if (min !== null && max !== null && max > min) return `${num(min)}–${num(max)} ₴`
+  if (min !== null && max === null) return `від ${num(min)} ₴`
+  return `${num((min ?? max)!)} ₴`
+}
+
+/** plural(3, ['артист', 'артисти', 'артистів']) → «артисти» */
+export function plural(n: number, [one, few, many]: [string, string, string]) {
+  const mod10 = n % 10
+  const mod100 = n % 100
+  if (mod10 === 1 && mod100 !== 11) return one
+  if (mod10 >= 2 && mod10 <= 4 && (mod100 < 12 || mod100 > 14)) return few
+  return many
+}

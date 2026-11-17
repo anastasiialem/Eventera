@@ -50,6 +50,48 @@
   }
 }
 
+/* Гелева / soft-blur текстура плиток (design/05-widget-texture.png). Компонент — GelTile. */
+@layer components {
+  .gel {
+    position: relative;
+    isolation: isolate;
+    border-radius: 36px;
+    color: rgb(var(--plum-dark));
+  }
+  .gel__bg {
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+    border-radius: inherit;
+    background:
+      radial-gradient(55% 50% at 38% 68%, var(--core) 0%, var(--mid) 45%, transparent 78%),
+      radial-gradient(45% 40% at 78% 22%, var(--glow) 0%, transparent 70%),
+      var(--edge);
+    filter: blur(10px); /* розмиті краї плитки, контент НЕ розмивається */
+    box-shadow:
+      inset 0 10px 30px rgba(255, 255, 255, 0.55),
+      inset 0 -12px 30px rgba(255, 255, 255, 0.35);
+  }
+  .gel--donate {
+    --core: #f2708a;
+    --mid: #f8b0b9;
+    --glow: #ffd9d2;
+    --edge: #ffefec;
+  }
+  .gel--telegram {
+    --core: #9a7dd3;
+    --mid: #c8b5ee;
+    --glow: #ede4ff;
+    --edge: #f5f0fd;
+  }
+  .gel--neutral {
+    --core: #e6d6de;
+    --mid: #f1e7ec;
+    --glow: #ffffff;
+    --edge: #fbf6f8;
+  }
+}
+
 @layer utilities {
   .no-scrollbar {
     scrollbar-width: none;
