@@ -16,7 +16,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import HTMLResponse
 
 from . import config, notify
-from .admin import make_admin_router
+from .admin import make_admin_router, ping_vip_requests
 from .bot import make_bot, make_router, make_sender, set_commands
 from .supabase import Supabase
 from .telegram_links import create_link_token
@@ -131,4 +131,9 @@ async def internal_notify(authorization: str | None = Header(default=None)) -> d
     """Розсилка з черг. Викликає GitHub Actions щогодини (.github/workflows/notify.yml)."""
     _check_secret((authorization or "").removeprefix("Bearer ").strip() or None, settings.internal_api_key)
     stats = await notify.run(db, make_sender(bot), settings.frontend_url)
-    return {queue: vars(s) for queue, s in stats.items()}
+    result: dict = {queue: vars(s) for queue, s in stats.items()}
+    try:
+        result["vip_requests_pending"] = await ping_vip_requests(bot, db, settings.admin_chat_ids)
+    except Exception:
+        log.exception("Не вдалось перевірити заявки VIP")   # розсилка вже пройшла — не валимо запит
+    return result

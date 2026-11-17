@@ -23,7 +23,7 @@ class FakePostgrest:
 
     def _match(self, row: dict, params) -> bool:
         for k, v in params.items():
-            if k in ("select", "limit", "on_conflict"):
+            if k in ("select", "limit", "on_conflict", "order"):
                 continue
             if str(row.get(k)) != v.removeprefix("eq."):
                 return False
@@ -35,6 +35,11 @@ class FakePostgrest:
         params = dict(request.url.params)
         if request.method == "GET":
             return httpx.Response(200, json=[r for r in rows if self._match(r, params)])
+        if request.method == "PATCH":
+            for r in rows:
+                if self._match(r, params):
+                    r.update(json.loads(request.content))
+            return httpx.Response(204)
         if request.method == "DELETE":
             self.tables[table] = [r for r in rows if not self._match(r, params)]
             return httpx.Response(204)
@@ -131,3 +136,30 @@ def test_is_vip():
 
 def test_format_date():
     assert notify.format_date("2026-12-16T23:30:00+00:00") == "17 грудня"
+
+
+def test_vip_extend_keeps_remaining_days():
+    from app.vip import extend
+    now = datetime(2026, 11, 17, tzinfo=timezone.utc)
+    assert extend(None, now) == now + timedelta(days=30)
+    assert extend("2026-11-01T00:00:00+00:00", now) == now + timedelta(days=30)        # минув — від сьогодні
+    assert extend("2026-11-27T00:00:00+00:00", now) == datetime(2026, 12, 27, tzinfo=timezone.utc)
+
+
+def test_vip_approve_and_reject():
+    from app import vip
+    db, fake = make_db({
+        "vip_requests": [{"id": 1, "user_id": "u1", "email": "a@x.ua", "status": "pending"},
+                         {"id": 2, "user_id": "u1", "email": "a@x.ua", "status": "pending"},
+                         {"id": 3, "user_id": "u2", "email": "b@x.ua", "status": "pending"}],
+        "profiles": [{"id": "u1", "vip_until": None}, {"id": "u2", "vip_until": None}],
+    })
+    now = datetime(2026, 11, 17, tzinfo=timezone.utc)
+    d = run(vip.approve(db, 1, now))
+    assert d.user_id == "u1" and d.vip_until == now + timedelta(days=30)
+    assert fake.tables["profiles"][0]["vip_until"] == (now + timedelta(days=30)).isoformat()
+    assert [r["status"] for r in fake.tables["vip_requests"]] == ["approved", "approved", "pending"]
+    assert run(vip.approve(db, 2, now)) is None            # уже оброблено
+    assert run(vip.reject(db, 3)).email == "b@x.ua"
+    assert fake.tables["vip_requests"][2]["status"] == "rejected"
+    assert fake.tables["profiles"][1]["vip_until"] is None
