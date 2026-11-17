@@ -1,4 +1,4 @@
-import { Heart, Loader2, Send } from 'lucide-react'
+import { Loader2, Send } from 'lucide-react'
 import type { ReactNode } from 'react'
 import { Link } from 'react-router-dom'
 import { logClick } from '../../lib/api'
@@ -6,7 +6,7 @@ import { DONATE_URL } from '../../lib/donate'
 import { useTelegramLink } from '../../lib/use-telegram-link'
 import { DashedRings } from '../ui/DashedRings'
 import { GelTile } from '../ui/GelTile'
-import { GradientHeart, VibratingIcon } from '../ui/VibratingIcon'
+import { DonateHeart, VibratingIcon } from '../ui/VibratingIcon'
 
 /** Клікабельна область на всю плитку; контент поверх розмитої краплі. */
 const hitClass =
@@ -53,15 +53,7 @@ function DonateTile() {
     <>
       <TileTitle>Задонать!</TileTitle>
       <span aria-hidden className="pointer-events-none absolute inset-0 flex items-center justify-center">
-        <VibratingIcon pulse className="relative items-center justify-center">
-          {/* напівпрозорий білий контур — на насиченому ядрі */}
-          <Heart
-            strokeWidth={1}
-            strokeDasharray="2.2 1.6"
-            className="absolute h-[clamp(4.5rem,13vw,6.5rem)] w-[clamp(4.5rem,13vw,6.5rem)] text-white/50"
-          />
-          <GradientHeart className="h-[clamp(2.6rem,7.5vw,3.75rem)] w-[clamp(2.6rem,7.5vw,3.75rem)] drop-shadow-[0_6px_14px_rgba(196,84,66,.35)]" />
-        </VibratingIcon>
+        <DonateHeart className="h-[clamp(3.05rem,8.75vw,4.4rem)] w-[clamp(3.05rem,8.75vw,4.4rem)]" />
       </span>
       <span
         aria-hidden

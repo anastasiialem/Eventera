@@ -16,6 +16,7 @@ import { DashedRings } from '../ui/DashedRings'
 import { GelTile } from '../ui/GelTile'
 import { Skeleton } from '../ui/Skeleton'
 import { useToast } from '../ui/toast-context'
+import { FRESH_QUERY } from '../../lib/fresh-query'
 
 const botHandle = '@' + (TELEGRAM_BOT_URL.match(/t\.me\/([\w_]+)/)?.[1] ?? 'Eventera_lviv_bot')
 
@@ -71,7 +72,6 @@ export function TelegramCard() {
           </Button>
         </div>
       )}
-      <SupportActions className="mt-4" />
     </GelTile>
   )
 }
@@ -126,6 +126,7 @@ export function NotifyPrefsCard() {
     queryKey: key,
     queryFn: getNotificationPrefs,
     enabled: Boolean(user),
+    ...FRESH_QUERY,
   })
 
   const mutation = useMutation({

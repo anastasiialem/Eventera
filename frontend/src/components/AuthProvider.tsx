@@ -3,6 +3,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react'
 import { AuthContext, displayNameOf, type AuthState, type Profile } from '../lib/auth-context'
 import { supabase } from '../lib/supabase'
+import { FRESH_QUERY } from '../lib/fresh-query'
 
 /**
  * Стан авторизації для всього застосунку.
@@ -39,7 +40,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const profileQuery = useQuery({
     queryKey: ['profile', userId],
     enabled: Boolean(supabase && userId),
-    staleTime: 5 * 60_000,
+    ...FRESH_QUERY,
     queryFn: async (): Promise<Profile | null> => {
       const { data, error } = await supabase!.from('profiles').select('*').eq('id', userId!).maybeSingle()
       if (error) throw error
