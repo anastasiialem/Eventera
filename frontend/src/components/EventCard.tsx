@@ -1,12 +1,10 @@
-import { useQueryClient } from '@tanstack/react-query'
 import { Bell, Loader2, MapPin, Share2 } from 'lucide-react'
-import { useState } from 'react'
-import { Link, useLocation, useNavigate } from 'react-router-dom'
-import { addSubscription, logClick, removeSubscription } from '../lib/api'
-import { useAuth } from '../lib/auth-context'
+import { Link, useLocation } from 'react-router-dom'
+import { logClick } from '../lib/api'
 import { cn } from '../lib/cn'
 import { CATEGORY_LABEL, formatDay, formatMonth, formatPrice, formatWeekdayTime } from '../lib/format'
-import { useSubscriptions } from '../lib/use-subscriptions'
+import { shareEvent } from '../lib/share'
+import { useBell } from '../lib/use-subscription-actions'
 import type { Event } from '../types'
 import { EventImage } from './EventImage'
 import { Badge } from './ui/Badge'
@@ -14,79 +12,15 @@ import { Button } from './ui/Button'
 import { DashedRings } from './ui/DashedRings'
 import { useToast } from './ui/toast-context'
 
-const lower = (s: string | null | undefined) => (s ?? '').trim().toLowerCase()
-
-/** Дзвіночок: підписка на першого артиста події (немає артистів — на назву події як keyword). */
-function useBell(event: Event) {
-  const { user } = useAuth()
-  const { subscriptions } = useSubscriptions()
-  const queryClient = useQueryClient()
-  const navigate = useNavigate()
-  const location = useLocation()
-  const toast = useToast()
-  const [pending, setPending] = useState(false)
-
-  const artist = event.artists[0]
-  const name = artist?.name ?? event.title
-  const current = subscriptions.find((s) =>
-    artist ? s.artist_id === artist.id || lower(s.keyword) === lower(artist.name) : lower(s.keyword) === lower(event.title),
-  )
-
-  const toggle = async () => {
-    if (!user) {
-      toast('Зареєструйся, щоб отримати сповіщення про нові концерти')
-      navigate(`/auth?mode=signup&next=${encodeURIComponent(location.pathname + location.search)}`)
-      return
-    }
-    if (pending) return
-    setPending(true)
-    try {
-      if (current) {
-        await removeSubscription(current.id)
-        toast(`«${current.label || name}» прибрано зі списку «Я чекаю на…»`)
-      } else {
-        void logClick('subscribe', event.id)
-        await addSubscription(name)
-        toast(`«${name}» — у списку «Я чекаю на…». Повідомимо, щойно буде нова подія`, { tone: 'success' })
-      }
-      await queryClient.invalidateQueries({ queryKey: ['subscriptions'] })
-      void queryClient.invalidateQueries({ queryKey: ['stats'] })
-    } catch (err) {
-      toast(err instanceof Error ? err.message : 'Не вдалося оновити список', { tone: 'error' })
-    } finally {
-      setPending(false)
-    }
-  }
-
-  return { active: Boolean(current), pending, toggle, name }
-}
-
-async function shareEvent(event: Event, toast: ReturnType<typeof useToast>) {
-  const url = `${window.location.origin}/event/${event.id}`
-  if (navigator.share) {
-    try {
-      await navigator.share({ title: event.title, text: `${event.title} — у Львові`, url })
-      return
-    } catch (err) {
-      if (err instanceof DOMException && err.name === 'AbortError') return
-    }
-  }
-  try {
-    await navigator.clipboard.writeText(url)
-    toast('Посилання скопійовано', { tone: 'success' })
-  } catch {
-    toast('Не вдалося скопіювати посилання', { tone: 'error' })
-  }
-}
-
 /**
  * Картка афіші. Уся картка веде на /event/:id через «розтягнуте» посилання на назві
  * (after:inset-0), а кнопки лежать над ним (relative z-10) — тож вони не відкривають
  * сторінку події і не вкладені в <a>.
  */
-export function EventCard({ event }: { event: Event }) {
+export function EventCard({ event, backTo }: { event: Event; /** куди веде «Назад до афіші» на сторінці події */ backTo?: string }) {
   const toast = useToast()
   const bell = useBell(event)
+  const location = useLocation()
   const ticketUrl = event.ticket_url ?? event.sources[0]?.url ?? null
   const source = event.sources[0]?.source
 
@@ -114,6 +48,7 @@ export function EventCard({ event }: { event: Event }) {
         <h3 className="line-clamp-2 font-display text-lg leading-snug">
           <Link
             to={`/event/${event.id}`}
+            state={{ back: backTo ?? location.pathname + location.search }}
             className="outline-none after:absolute after:inset-0 after:rounded-card after:content-[''] focus-visible:after:ring-2 focus-visible:after:ring-coral/70"
           >
             {event.title}

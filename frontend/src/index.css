@@ -50,6 +50,164 @@
   }
 }
 
+/* Гелева / soft-blur текстура плиток (design/05-widget-texture.png). Компонент — GelTile.
+   Без overflow:hidden на .gel: інакше розмиті краї (feather) обрізаються в чітку межу.
+   Декор, що може вилазити за плитку (кола, що обертаються), — у .gel__decor (він обрізає). */
+@layer components {
+  .gel {
+    position: relative;
+    isolation: isolate;
+    border-radius: 36px;
+    color: rgb(var(--plum-dark));
+  }
+  .gel__bg {
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+    border-radius: inherit;
+    background:
+      /* ядро ширше за базовий рецепт — як на 05-widget-texture.png колір займає ~70% плитки */
+      radial-gradient(68% 62% at 38% 68%, var(--core) 0%, var(--mid) 48%, transparent 86%),
+      radial-gradient(45% 40% at 78% 22%, var(--glow) 0%, transparent 70%),
+      var(--edge);
+    filter: blur(10px); /* розмиті краї плитки, контент НЕ розмивається */
+    box-shadow:
+      inset 0 10px 30px rgba(255, 255, 255, 0.55),
+      inset 0 -12px 30px rgba(255, 255, 255, 0.35);
+  }
+  /* «Насиченість» на hover: друге, щільніше ядро проявляється через opacity
+     (анімуємо лише opacity, не filter). */
+  .gel__bg::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    background: radial-gradient(48% 44% at 38% 68%, var(--core) 0%, transparent 72%);
+    opacity: 0;
+    transition: opacity 0.25s ease;
+  }
+  .gel__decor {
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+    overflow: hidden;
+    border-radius: inherit;
+    pointer-events: none;
+  }
+  /* М'яка тінь під плиткою на hover — окремий шар, проявляється через opacity */
+  .gel::after {
+    content: '';
+    position: absolute;
+    inset: 8% 6% 0;
+    z-index: -2;
+    border-radius: inherit;
+    box-shadow: 0 18px 40px rgb(var(--plum) / 0.18);
+    opacity: 0;
+    transition: opacity 0.25s ease;
+  }
+  .gel--interactive {
+    transition: transform 0.25s ease;
+  }
+  .gel--interactive:hover,
+  .gel--interactive:focus-within {
+    transform: translateY(-4px);
+  }
+  .gel--interactive:hover::after,
+  .gel--interactive:focus-within::after {
+    opacity: 1;
+  }
+  .gel--interactive:hover .gel__bg::after,
+  .gel--interactive:focus-within .gel__bg::after {
+    opacity: 0.35;
+  }
+  .gel--donate {
+    --core: #f2708a;
+    --mid: #f8b0b9;
+    --glow: #ffd9d2;
+    --edge: #ffefec;
+  }
+  .gel--telegram {
+    --core: #9a7dd3;
+    --mid: #c8b5ee;
+    --glow: #ede4ff;
+    --edge: #f5f0fd;
+  }
+  .gel--neutral {
+    --core: #e6d6de;
+    --mid: #f1e7ec;
+    --glow: #ffffff;
+    --edge: #fbf6f8;
+  }
+
+  /* «Телефон на беззвучному»: тремтіння ~0.45 с, пауза ~2 с. Лише transform, жодного звуку.
+     Затримку фази задає --vibe-delay (VibratingIcon). */
+  .vibrate {
+    animation: vibrate 2.45s linear infinite;
+    animation-delay: var(--vibe-delay, 0s);
+  }
+  /* Hover: частіше (пауза ~0.75 с) */
+  .gel:hover .vibrate,
+  .gel:focus-within .vibrate {
+    animation-name: vibrate-fast;
+    animation-duration: 1.2s;
+    animation-delay: 0s;
+  }
+  .heartbeat {
+    animation: heartbeat 2.45s ease-in-out infinite;
+    animation-delay: var(--vibe-delay, 0s);
+  }
+  .spin-slow {
+    animation: spin-slow 50s linear infinite;
+  }
+  .spin-slow-reverse {
+    animation: spin-slow 56s linear infinite reverse;
+  }
+
+  /* Hero: crossfade 1.2 с і легкий Ken Burns (scale 1 → 1.06) */
+  .hero-slide {
+    transition: opacity 1.2s ease-in-out;
+  }
+  .ken-burns {
+    animation: ken-burns 7.2s linear forwards;
+  }
+}
+
+@keyframes vibrate {
+  0%, 18.4%, 100% { transform: translate3d(0, 0, 0) rotate(0); }
+  2.3% { transform: translate3d(-2px, 0, 0) rotate(-4deg); }
+  4.6% { transform: translate3d(2px, 0, 0) rotate(4deg); }
+  6.9% { transform: translate3d(-2px, 0, 0) rotate(-3deg); }
+  9.2% { transform: translate3d(2px, 0, 0) rotate(3deg); }
+  11.5% { transform: translate3d(-1.5px, 0, 0) rotate(-2deg); }
+  13.8% { transform: translate3d(1.5px, 0, 0) rotate(2deg); }
+  16.1% { transform: translate3d(-1px, 0, 0) rotate(-1deg); }
+}
+@keyframes vibrate-fast {
+  0%, 37.5%, 100% { transform: translate3d(0, 0, 0) rotate(0); }
+  4.7% { transform: translate3d(-2px, 0, 0) rotate(-4deg); }
+  9.4% { transform: translate3d(2px, 0, 0) rotate(4deg); }
+  14.1% { transform: translate3d(-2px, 0, 0) rotate(-3deg); }
+  18.8% { transform: translate3d(2px, 0, 0) rotate(3deg); }
+  23.5% { transform: translate3d(-1.5px, 0, 0) rotate(-2deg); }
+  28.2% { transform: translate3d(1.5px, 0, 0) rotate(2deg); }
+  32.9% { transform: translate3d(-1px, 0, 0) rotate(-1deg); }
+}
+@keyframes heartbeat {
+  0%, 20%, 100% { transform: scale(1); }
+  9% { transform: scale(1.08); }
+}
+@keyframes spin-slow {
+  to { transform: rotate(360deg); }
+}
+@keyframes ken-burns {
+  from { transform: scale(1); }
+  to { transform: scale(1.06); }
+}
+@keyframes calm-pulse {
+  0%, 100% { transform: scale(1); opacity: 1; }
+  50% { transform: scale(1.03); opacity: 0.88; }
+}
+
 @layer utilities {
   .no-scrollbar {
     scrollbar-width: none;
@@ -67,5 +225,33 @@
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
     scroll-behavior: auto !important;
+  }
+}
+
+/* Після загального reduce-правила: вібрація → дуже спокійна пульсація, без обертання і Ken Burns.
+   Класовий селектор + !important перебиває «*» вище. */
+@media (prefers-reduced-motion: reduce) {
+  .vibrate,
+  .gel:hover .vibrate,
+  .gel:focus-within .vibrate {
+    animation-name: calm-pulse !important;
+    animation-duration: 4s !important;
+    animation-timing-function: ease-in-out !important;
+    animation-iteration-count: infinite !important;
+    animation-delay: var(--vibe-delay, 0s) !important;
+  }
+  .heartbeat,
+  .spin-slow,
+  .spin-slow-reverse,
+  .ken-burns {
+    animation: none !important;
+  }
+  .gel--interactive:hover,
+  .gel--interactive:focus-within {
+    transform: none;
+  }
+  /* Crossfade (лише opacity) лишаємо м'яким */
+  .hero-slide {
+    transition-duration: 1.2s !important;
   }
 }

@@ -11,12 +11,14 @@ import type {
   EventFilters,
   EventGenre,
   FeedbackInput,
+  NotificationPrefs,
   Period,
   Profile,
   ProfilePatch,
   Stats,
   Subscription,
   SubscriptionKind,
+  TelegramStatus,
 } from '../types'
 import { getAccessToken, getUserId, supabase } from './supabase'
 
@@ -454,6 +456,46 @@ export async function updateProfile(patch: ProfilePatch): Promise<Profile> {
   return data as Profile
 }
 
+// Налаштування сповіщень (/waitlist → «Як повідомляти»).
+// remind_day_before / max_price — з міграції profile_preferences Ролі 3; якщо її ще
+// не накотили (колонок немає) — повертаємо extended: false, і чекбокси ховаються.
+const BASE_PREFS = 'email_alerts, telegram_alerts'
+const EXTENDED_PREFS = `${BASE_PREFS}, remind_day_before, max_price`
+
+export async function getNotificationPrefs(): Promise<{ prefs: NotificationPrefs; extended: boolean } | null> {
+  if (!supabase || !(await getUserId())) return null
+  const ext = await supabase.from('profiles').select(EXTENDED_PREFS).maybeSingle()
+  if (!ext.error) return ext.data ? { prefs: ext.data as NotificationPrefs, extended: true } : null
+  console.warn('[eventera] getNotificationPrefs: немає remind_day_before / max_price, показую базові', ext.error)
+  const base = await supabase.from('profiles').select(BASE_PREFS).maybeSingle()
+  if (base.error) throw base.error
+  return base.data ? { prefs: base.data as NotificationPrefs, extended: false } : null
+}
+
+export async function updateNotificationPrefs(patch: Partial<NotificationPrefs>): Promise<void> {
+  const userId = await getUserId()
+  if (!supabase || !userId) throw new Error('Потрібно увійти')
+  const { error } = await supabase.from('profiles').update(patch).eq('id', userId)
+  if (error) throw error
+}
+
+// ---------------------------------------------------------------------------
+// Telegram: чи прив'язаний акаунт (telegram_links, RLS «own telegram: read»)
+// ---------------------------------------------------------------------------
+
+/** null — невідомо (немає Supabase / RLS не дає читати): показуємо лише «Підключити». */
+export async function getTelegramStatus(): Promise<TelegramStatus | null> {
+  if (!supabase || !(await getUserId())) return null
+  try {
+    const { data, error } = await supabase.from('telegram_links').select('username').maybeSingle()
+    if (error) throw error
+    return data ? { linked: true, username: (data.username as string | null) ?? null } : { linked: false, username: null }
+  } catch (err) {
+    console.warn('[eventera] getTelegramStatus: не вдалося прочитати telegram_links', err)
+    return null
+  }
+}
+
 // ---------------------------------------------------------------------------
 // «Я чекаю на…» (subscriptions Ролі 3: kind + artist_id | event_id | keyword)
 // ---------------------------------------------------------------------------
@@ -540,7 +582,7 @@ async function findArtistId(name: string): Promise<number | null> {
  * Додати артиста / виставу в «Я чекаю на…».
  * Є в artists → kind='artist' + artist_id; немає → kind='keyword'.
  */
-export async function addSubscription(name: string): Promise<Subscription> {
+export async function addSubscription(name: string, opts: { artistId?: number } = {}): Promise<Subscription> {
   const clean = name.trim()
   if (clean.length < 2) throw new Error('Назва має містити щонайменше 2 символи')
 
@@ -548,10 +590,10 @@ export async function addSubscription(name: string): Promise<Subscription> {
     const list = readLocalSubs()
     const sub: Subscription = {
       id: Date.now(),
-      kind: 'keyword',
-      artist_id: null,
+      kind: opts.artistId ? 'artist' : 'keyword',
+      artist_id: opts.artistId ?? null,
       event_id: null,
-      keyword: clean,
+      keyword: opts.artistId ? null : clean,
       created_at: new Date().toISOString(),
       label: clean,
     }
@@ -573,7 +615,7 @@ export async function addSubscription(name: string): Promise<Subscription> {
   }
 
   const userId = (await getUserId())!
-  const artistId = await findArtistId(clean)
+  const artistId = opts.artistId ?? (await findArtistId(clean))
   const insert: { user_id: string; kind: SubscriptionKind; artist_id: number | null; keyword: string | null } =
     artistId
       ? { user_id: userId, kind: 'artist', artist_id: artistId, keyword: null }
