@@ -5,6 +5,7 @@
 """
 from __future__ import annotations
 
+import asyncio
 import hmac
 import logging
 from contextlib import asynccontextmanager
@@ -35,19 +36,26 @@ _bot_username: str | None = None
 
 @asynccontextmanager
 async def lifespan(_: FastAPI):
+    # Збій Telegram під час старту (ліміт запитів, мережа) не має валити деплой:
+    # сервер піднімається, а webhook лишається попередній (він той самий URL).
     global _bot_username
-    me = await bot.get_me()
-    _bot_username = me.username
-    await set_commands(bot, settings.admin_chat_ids)
-    if settings.public_base_url:
-        await bot.set_webhook(
-            f"{settings.public_base_url}/telegram/webhook",
-            secret_token=settings.webhook_secret,
-            allowed_updates=["message", "callback_query"],
-        )
-        log.info("Webhook @%s -> %s/telegram/webhook", me.username, settings.public_base_url)
-    else:
-        log.info("PUBLIC_BASE_URL не задано: webhook не ставлю (локально бот — через python -m app.polling)")
+    for attempt in range(3):
+        try:
+            _bot_username = (await bot.get_me()).username
+            await set_commands(bot, settings.admin_chat_ids)
+            if settings.public_base_url:
+                await bot.set_webhook(
+                    f"{settings.public_base_url}/telegram/webhook",
+                    secret_token=settings.webhook_secret,
+                    allowed_updates=["message", "callback_query"],
+                )
+                log.info("Webhook @%s -> %s/telegram/webhook", _bot_username, settings.public_base_url)
+            else:
+                log.info("PUBLIC_BASE_URL не задано: webhook не ставлю (локально бот — через python -m app.polling)")
+            break
+        except Exception:
+            log.exception("Telegram під час старту, спроба %d/3", attempt + 1)
+            await asyncio.sleep(2 * (attempt + 1))
     yield
     await bot.session.close()
     await db.close()
@@ -123,7 +131,7 @@ async def telegram_link(authorization: str | None = Header(default=None)) -> dic
     if not user_id:
         raise HTTPException(status_code=401, detail="Сесія недійсна")
     token = await create_link_token(db, user_id)
-    return {"url": f"https://t.me/{_bot_username}?start={token}"}
+    return {"url": f"https://t.me/{_bot_username or 'Eventera_lviv_bot'}?start={token}"}
 
 
 @app.post("/internal/notify")
