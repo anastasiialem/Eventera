@@ -1,19 +1,19 @@
-import { Check, Heart, Loader2, Send } from 'lucide-react'
+import { Check, Loader2, Send } from 'lucide-react'
 import { DONATE_NOTE } from '../../lib/donate'
 import { useTelegramLink } from '../../lib/use-telegram-link'
 import { useTelegramStatus } from '../../lib/use-telegram-status'
 import { SupportActions } from '../SupportActions'
 import { DashedRings } from '../ui/DashedRings'
 import { GelTile } from '../ui/GelTile'
-import { GradientHeart, VibratingIcon } from '../ui/VibratingIcon'
+import { DonateHeart } from '../ui/VibratingIcon'
 
-/** Telegram-нагадування на сторінці події. Кнопка — через linkTelegram(); поруч — SupportActions. */
+/** Telegram-нагадування на сторінці події. Кнопка «Підключити» — через linkTelegram(). */
 export function TelegramReminder() {
   const telegram = useTelegramLink()
   const { linked } = useTelegramStatus()
 
   return (
-    <GelTile variant="telegram" className="space-y-4 rounded-[28px] p-5">
+    <GelTile variant="telegram" className="rounded-[28px] p-5">
       <div className="flex items-center gap-4">
         <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-[linear-gradient(145deg,#7A5A8E,#5A3A6E)] text-white shadow-soft">
           {telegram.pending ? (
@@ -43,12 +43,11 @@ export function TelegramReminder() {
           )}
         </div>
       </div>
-      <SupportActions />
     </GelTile>
   )
 }
 
-/** «Йдеш на концерт — підтримай збір». */
+/** «Йдеш на концерт — підтримай збір». Єдине місце SupportActions на сторінці події. */
 export function DonateBlock() {
   return (
     <GelTile
@@ -61,10 +60,7 @@ export function DonateBlock() {
       }
     >
       <span aria-hidden className="pointer-events-none absolute right-[13%] top-[38%] -translate-y-1/2">
-        <VibratingIcon pulse className="relative items-center justify-center">
-          <Heart strokeWidth={1} strokeDasharray="2.2 1.6" className="absolute h-[100px] w-[100px] text-white/50" />
-          <GradientHeart className="h-14 w-14 drop-shadow-[0_6px_14px_rgba(196,84,66,.35)]" />
-        </VibratingIcon>
+        <DonateHeart className="h-16 w-16" />
       </span>
       <h2 className="relative max-w-[12ch] text-[1.65rem] leading-tight text-plum-dark">Йдеш на концерт — підтримай збір</h2>
       <p className="relative mt-2 max-w-[22ch] text-xs leading-relaxed text-plum-dark/75">{DONATE_NOTE}.</p>

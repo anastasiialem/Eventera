@@ -6,6 +6,7 @@ import { SupportActions } from '../components/SupportActions'
 import { Button } from '../components/ui/Button'
 import { DashedRings } from '../components/ui/DashedRings'
 import { GelTile } from '../components/ui/GelTile'
+import { DonateHeart } from '../components/ui/VibratingIcon'
 import { TariffTable } from '../components/vip/TariffTable'
 import { getDonateCount, logClick } from '../lib/api'
 import { DONATE_NOTE, DONATE_URL } from '../lib/donate'
@@ -33,11 +34,15 @@ function DonateSection() {
         </span>
       }
     >
+      {/* серце в центрі пунктирних кіл (центр кіл — 66px від правого й верхнього краю) */}
+      <span aria-hidden className="pointer-events-none absolute right-[38px] top-[38px]">
+        <DonateHeart className="h-14 w-14" />
+      </span>
       <section aria-labelledby="donate-title" className="relative space-y-5">
         <p className="flex items-center gap-2 text-sm font-medium text-coral-deep">
           <Heart size={16} className="fill-current" aria-hidden /> Донат
         </p>
-        <h2 id="donate-title" className="font-display text-3xl leading-tight text-plum-dark sm:text-4xl">
+        <h2 id="donate-title" className="pr-14 font-display text-3xl leading-tight text-plum-dark sm:pr-16 sm:text-4xl">
           Донат на «Повернись живим»
         </h2>
         <p className="max-w-md text-plum-dark/80">{DONATE_NOTE}.</p>

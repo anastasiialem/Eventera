@@ -1,6 +1,7 @@
 import { useQuery } from '@tanstack/react-query'
 import { getTelegramStatus } from './api'
 import { useAuth } from './auth-context'
+import { FRESH_QUERY } from './fresh-query'
 
 /**
  * Чи прив'язаний Telegram (рядок у telegram_links). linked = false і коли невідомо
@@ -13,8 +14,7 @@ export function useTelegramStatus() {
     queryKey: ['telegram-status', user?.id],
     queryFn: getTelegramStatus,
     enabled: Boolean(user),
-    staleTime: 30_000,
-    refetchOnWindowFocus: true,
+    ...FRESH_QUERY,
   })
   return { linked: Boolean(user && query.data?.linked), username: query.data?.username ?? null }
 }

@@ -61,7 +61,8 @@ export default function HomePage() {
           <div className="flex flex-col gap-4 sm:gap-5 lg:pt-1.5">
             <WeekStats />
             <HomeTiles />
-            <SupportActions />
+            {/* gap як у HomeTiles: «Задонатити» під рожевою плиткою, «Підписатися» — під фіолетовою */}
+            <SupportActions className="gap-3 sm:gap-5" />
           </div>
         </div>
       </div>

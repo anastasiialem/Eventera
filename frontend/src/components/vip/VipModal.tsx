@@ -9,6 +9,7 @@ import { Button } from '../ui/Button'
 import { Modal } from '../ui/Modal'
 import { useToast } from '../ui/toast-context'
 import { TariffTable } from './TariffTable'
+import { FRESH_QUERY } from '../../lib/fresh-query'
 
 function Step({ n, title, children }: { n: number; title: string; children: ReactNode }) {
   return (
@@ -40,6 +41,7 @@ export function VipModal({ open, onClose, reason }: { open: boolean; onClose: ()
     queryKey: key,
     queryFn: getLatestVipRequest,
     enabled: open && Boolean(user) && !isVip,
+    ...FRESH_QUERY,
   })
 
   const submit = useMutation({

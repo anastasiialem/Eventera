@@ -10,8 +10,8 @@ const base =
   'inline-flex min-h-[3.25rem] select-none flex-col items-center justify-center rounded-full px-3 py-1.5 text-center font-medium leading-tight transition active:scale-[.97]'
 
 /**
- * «Підписатися» (VIP 39 ₴/міс → модалка) і «Задонатити» (банка «Повернись живим») — завжди поруч.
- * ПРАВИЛО: скрізь, де є «Задонатити» або кнопка/плитка Telegram, поруч має бути цей блок.
+ * «Задонатити» (банка «Повернись живим», ліворуч) і «Підписатися» (VIP 39 ₴/міс → модалка, праворуч).
+ * ПРАВИЛО: пара — один раз на сторінці, біля блоку донату (футер не рахується).
  */
 export function SupportActions({ tone = 'light', className }: { tone?: 'light' | 'dark'; className?: string }) {
   const { isVip, until, openVip } = useVip()
@@ -30,21 +30,6 @@ export function SupportActions({ tone = 'light', className }: { tone?: 'light' |
 
   return (
     <div className={cn('grid grid-cols-2 gap-2', className)}>
-      <button type="button" onClick={() => openVip()} className={subscribeCls}>
-        {isVip && until ? (
-          <span className="inline-flex items-center gap-1.5 text-sm">
-            <Crown size={15} aria-hidden /> VIP до {formatVipDate(until)}
-          </span>
-        ) : (
-          <>
-            <span className="text-sm">Підписатися</span>
-            <span className={cn('text-[11px] font-normal', dark ? 'text-plum-soft' : 'text-white/70')}>
-              VIP · {VIP_PRICE} ₴/міс
-            </span>
-          </>
-        )}
-      </button>
-
       {DONATE_URL ? (
         <a
           href={DONATE_URL}
@@ -61,6 +46,21 @@ export function SupportActions({ tone = 'light', className }: { tone?: 'light' |
           {donateContent}
         </Link>
       )}
+
+      <button type="button" onClick={() => openVip()} className={subscribeCls}>
+        {isVip && until ? (
+          <span className="inline-flex items-center gap-1.5 text-sm">
+            <Crown size={15} aria-hidden /> VIP до {formatVipDate(until)}
+          </span>
+        ) : (
+          <>
+            <span className="text-sm">Підписатися</span>
+            <span className={cn('text-[11px] font-normal', dark ? 'text-plum-soft' : 'text-white/70')}>
+              VIP · {VIP_PRICE} ₴/міс
+            </span>
+          </>
+        )}
+      </button>
     </div>
   )
 }
