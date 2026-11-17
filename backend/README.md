@@ -1,6 +1,7 @@
 # backend/
 
-- `parser/` — парсер афіш + AI-витягування полів (Роль 1), див. `parser/README.md`.
+- `parser/` — парсер афіш Concert.ua і Karabas, запис у Supabase (Роль 1), див. `parser/README.md`.
+  Запускається щогодини через GitHub Actions (`.github/workflows/parser.yml`).
 - `app/` — API для сайту + Telegram-бот **@Eventera_lviv_bot** (Роль 3), деплой на Render.
 
 Схема бази даних — `supabase/migrations/` у корені репо.

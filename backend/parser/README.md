@@ -68,8 +68,11 @@ Do this only while there are no real users.
 
 ## Next steps
 
-- [ ] test on the real sites; 0 events means the site loads data with JavaScript -> playwright
-- [ ] Concert.ua pagination (currently ~20 events)
+- [x] tested on the real sites (~140 records -> ~130 events)
+- [x] Concert.ua pagination
+- [x] scheduled runs: `.github/workflows/parser.yml`, every hour at :50, before the
+      Telegram notifications at :15. Needs repository secrets `SUPABASE_URL` and
+      `SUPABASE_SERVICE_ROLE_KEY`; run it by hand with Actions -> Parser -> Run workflow.
+      A run fails (red) if no events were collected or none could be saved.
 - [ ] a theatre site + AI extraction from plain text (needs a migration adding its code to `sources`)
 - [ ] AI for tricky artist names and genres
-- [ ] scheduled runs (GitHub Actions) with secrets `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`

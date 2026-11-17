@@ -1,8 +1,10 @@
 # Eventera
 
-Усі концерти й вистави Львова в одному місці. Eventera збирає афіші з Concert.ua, Karabas, сайтів театрів
-і Telegram-каналів, а у списку «Я чекаю на…» можна підписатися на артиста й отримати сповіщення,
-щойно в нього з'явиться подія у Львові.
+Усі концерти й вистави Львова в одному місці. Eventera щогодини збирає афіші з Concert.ua і Karabas
+(збирати афіші ще й із сайтів театрів і Telegram-каналів — у планах), а у списку «Я чекаю на…» можна підписатися на артиста
+й отримати сповіщення в Telegram, щойно в нього з'явиться подія у Львові.
+
+**Сайт:** <!-- TODO: вставити адресу з Vercel --> https://…vercel.app · **Бот:** [@Eventera_lviv_bot](https://t.me/Eventera_lviv_bot)
 
 ## Структура
 
@@ -25,6 +27,24 @@ npm run dev                  # http://localhost:5173
 
 Без `.env.local` сайт працює на демо-даних (`frontend/src/mocks/events.ts`).
 Порядок джерел даних: API (`VITE_API_URL`) → Supabase напряму → моки.
+
+## Парсер афіш
+
+Код — `backend/parser/` (Python), докладно — `backend/parser/README.md`. Збирає події Львова з Concert.ua
+і Karabas, склеює одну подію з двох сайтів і записує в Supabase. На сервері запускається щогодини
+через GitHub Actions (`.github/workflows/parser.yml`, секрети `SUPABASE_URL` і `SUPABASE_SERVICE_ROLE_KEY`).
+
+Локально:
+
+```bash
+cd backend
+python3 -m venv .venv && source .venv/bin/activate
+pip install -r parser/requirements.txt
+python -m parser.run              # лише показати, що знайшлося
+cp .env.example .env              # вписати SUPABASE_URL і SUPABASE_SERVICE_ROLE_KEY
+python -m parser.run --db         # записати в базу
+python -m pytest parser/tests     # тести
+```
 
 ## Telegram-бот
 
