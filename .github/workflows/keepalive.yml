@@ -1,0 +1,24 @@
+name: Keep Render awake
+
+# Безкоштовний Render засинає після ~15 хв без запитів, і перший запит
+# (кнопка «Сповіщення в Telegram», повідомлення боту) чекає ~40 с.
+# Пінгуємо /health кожні 10 хв. GitHub може запускати cron із запізненням,
+# тому для повної гарантії варто додати ще й зовнішній монітор (UptimeRobot, 5 хв).
+on:
+  schedule:
+    - cron: "*/10 * * * *"
+  workflow_dispatch:
+
+concurrency:
+  group: keepalive
+  cancel-in-progress: true
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - name: Ping /health
+        env:
+          BACKEND_URL: ${{ secrets.BACKEND_URL }}
+        run: curl -fsS --retry 3 --retry-delay 15 --max-time 90 -o /dev/null -w "%{http_code} %{time_total}s\n" "$BACKEND_URL/health"
